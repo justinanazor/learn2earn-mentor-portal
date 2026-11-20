@@ -1,7 +1,15 @@
 import { Router } from 'express';
 import Fellow from '../models/Fellow.js';
 import Assessment from '../models/Assessment.js';
+import User from '../models/User.js';
 const router = Router();
+async function validateMentor(name,res) {
+  if (!name || !await User.exists({name,role:'mentor',active:true})) {
+    res.status(400).json({message:'Select an active mentor account.'});
+    return false;
+  }
+  return true;
+}
 router.get('/', async (req,res) => {
   const { mentor, search, standing, group='Group B' } = req.query;
   const filter = { group, active: true };
@@ -14,12 +22,21 @@ router.get('/', async (req,res) => {
 router.post('/', async (req,res) => {
   const data = {...req.body};
   if (req.user.role === 'mentor') data.assignedMentor = req.user.name;
+  if (req.user.role === 'admin' && !await validateMentor(data.assignedMentor,res)) return;
   const count = await Fellow.countDocuments({group:data.group || 'Group B'});
   const fellow = await Fellow.create({...data, fellowId:data.fellowId || `GB-${String(count+1).padStart(3,'0')}`});
   res.status(201).json(fellow);
 });
 router.get('/:id', async (req,res) => { const f=await Fellow.findById(req.params.id); if(!f || (req.user.role==='mentor' && f.assignedMentor!==req.user.name)) return res.status(404).json({message:'Fellow not found'}); res.json(f); });
-router.patch('/:id', async (req,res) => { const existing=await Fellow.findById(req.params.id); if(!existing || (req.user.role==='mentor' && existing.assignedMentor!==req.user.name)) return res.status(404).json({message:'Fellow not found'}); const payload={...req.body}; if(req.user.role==='mentor') payload.assignedMentor=req.user.name; const f=await Fellow.findByIdAndUpdate(req.params.id,payload,{new:true,runValidators:true}); res.json(f); });
+router.patch('/:id', async (req,res) => {
+  const existing=await Fellow.findById(req.params.id);
+  if(!existing || (req.user.role==='mentor' && existing.assignedMentor!==req.user.name)) return res.status(404).json({message:'Fellow not found'});
+  const payload={...req.body};
+  if(req.user.role==='mentor') payload.assignedMentor=req.user.name;
+  if(req.user.role==='admin' && payload.assignedMentor && !await validateMentor(payload.assignedMentor,res)) return;
+  const fellow=await Fellow.findByIdAndUpdate(req.params.id,payload,{new:true,runValidators:true});
+  res.json(fellow);
+});
 router.delete('/:id', async (req,res) => { const existing=await Fellow.findById(req.params.id); if(!existing || (req.user.role==='mentor' && existing.assignedMentor!==req.user.name)) return res.status(404).json({message:'Fellow not found'}); await Fellow.findByIdAndUpdate(req.params.id,{active:false}); res.json({message:'Fellow archived'}); });
 router.get('/:id/history', async (req,res) => {
   const owner=await Fellow.findById(req.params.id); if(!owner || (req.user.role==='mentor' && owner.assignedMentor!==req.user.name)) return res.status(404).json({message:'Fellow not found'});
