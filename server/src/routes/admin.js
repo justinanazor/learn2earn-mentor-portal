@@ -13,9 +13,10 @@ import { renameMentorReferences } from '../utils/mentor.js';
 const router = Router();
 router.use(adminOnly);
 
+const groups = ['Group A','Group B'];
 const normalizeEmail = value => String(value || '').trim().toLowerCase();
 const validEmail = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-const publicUser = user => ({id:user._id,name:user.name,email:user.email,role:user.role,active:user.active,createdAt:user.createdAt});
+const publicUser = user => ({id:user._id,name:user.name,email:user.email,role:user.role,groups:user.groups||[],active:user.active,createdAt:user.createdAt});
 
 async function mentorNameInUse(name, excludeId) {
   const mentors = await User.find({role:'mentor',...(excludeId?{_id:{$ne:excludeId}}:{})}).select('name').lean();
@@ -29,15 +30,17 @@ router.get('/users', async (_req,res) => {
 
 router.post('/users', async (req,res) => {
   const {name,email,password,role='mentor'} = req.body || {};
+  const requestedGroups = req.body?.groups;
   const nextName = String(name || '').trim();
   const nextEmail = normalizeEmail(email);
   if (!nextName || nextName.length > 120) return res.status(400).json({message:'Name is required and must be 120 characters or fewer.'});
   if (!validEmail(nextEmail)) return res.status(400).json({message:'Enter a valid email address.'});
   if (!['admin','mentor'].includes(role)) return res.status(400).json({message:'Role must be admin or mentor.'});
+  if (role === 'mentor' && (!Array.isArray(requestedGroups) || !requestedGroups.length || requestedGroups.some(group=>!groups.includes(group)))) return res.status(400).json({message:'Assign at least one valid group to the mentor.'});
   if (typeof password !== 'string' || password.length < 12) return res.status(400).json({message:'Initial passwords must be at least 12 characters long.'});
   if (await User.exists({email:nextEmail})) return res.status(409).json({message:'An account with this email already exists.'});
   if (role === 'mentor' && await mentorNameInUse(nextName)) return res.status(409).json({message:'Another mentor already uses this name.'});
-  const user = await User.create({name:nextName,email:nextEmail,password:await bcrypt.hash(password,12),role,active:true});
+  const user = await User.create({name:nextName,email:nextEmail,password:await bcrypt.hash(password,12),role,groups:role==='mentor'?[...new Set(requestedGroups)]:[],active:true});
   res.status(201).json(publicUser(user));
 });
 
@@ -50,10 +53,12 @@ router.patch('/users/:id', async (req,res) => {
   const nextEmail = body.email === undefined ? user.email : normalizeEmail(body.email);
   const nextRole = body.role === undefined ? user.role : body.role;
   const nextActive = body.active === undefined ? user.active : body.active;
+  const requestedGroups = body.groups === undefined ? (nextRole===user.role?user.groups||[]:[]) : body.groups;
 
   if (!nextName || nextName.length > 120) return res.status(400).json({message:'Name is required and must be 120 characters or fewer.'});
   if (!validEmail(nextEmail)) return res.status(400).json({message:'Enter a valid email address.'});
   if (!['admin','mentor'].includes(nextRole)) return res.status(400).json({message:'Role must be admin or mentor.'});
+  if (!Array.isArray(requestedGroups) || requestedGroups.some(group=>!groups.includes(group)) || (nextRole==='mentor'&&!requestedGroups.length) || (nextRole==='admin'&&requestedGroups.length)) return res.status(400).json({message:nextRole==='mentor'?'Assign at least one valid group to the mentor.':'Administrators cannot be assigned to mentor groups.'});
   if (typeof nextActive !== 'boolean') return res.status(400).json({message:'Active status must be true or false.'});
   if (body.password !== undefined && body.password !== '' && (typeof body.password !== 'string' || body.password.length < 12)) return res.status(400).json({message:'New passwords must be at least 12 characters long.'});
   if (await User.exists({email:nextEmail,_id:{$ne:user._id}})) return res.status(409).json({message:'An account with this email already exists.'});
@@ -65,6 +70,8 @@ router.patch('/users/:id', async (req,res) => {
     const activeAdmins = await User.countDocuments({role:'admin',active:true});
     if (activeAdmins <= 1) return res.status(400).json({message:'The last active administrator cannot be demoted or deactivated.'});
   }
+  const removedGroups = user.role==='mentor'?(user.groups||[]).filter(group=>nextRole!=='mentor'||!requestedGroups.includes(group)):[];
+  if (removedGroups.length && await Fellow.exists({group:{$in:removedGroups},assignedMentor:user.name,active:true})) return res.status(409).json({message:'Reassign this mentor’s active fellows before removing their group access.'});
   if (user.role === 'mentor' && (nextRole !== 'mentor' || !nextActive)) {
     const assigned = await Fellow.countDocuments({assignedMentor:user.name,active:true});
     if (assigned) return res.status(409).json({message:'Reassign this mentor’s active fellows before changing their role or deactivating the account.'});
@@ -75,6 +82,7 @@ router.patch('/users/:id', async (req,res) => {
   user.name = nextName;
   user.email = nextEmail;
   user.role = nextRole;
+  user.groups = nextRole==='mentor'?[...new Set(requestedGroups)]:[];
   user.active = nextActive;
   if (typeof body.password === 'string' && body.password) {
     user.password = await bcrypt.hash(body.password,12);
@@ -86,17 +94,17 @@ router.patch('/users/:id', async (req,res) => {
 
 router.get('/mentor-progress', async (_req,res) => {
   const [users,fellows,dailyLogs,assessments,weeklyReviews,actions] = await Promise.all([
-    User.find({role:'mentor'}).select('_id name email active').sort({name:1}).lean(),
+    User.find({role:'mentor'}).select('_id name email groups active').sort({name:1}).lean(),
     Fellow.aggregate([{$match:{active:true}},{$group:{_id:'$assignedMentor',totalFellows:{$sum:1},onTrack:{$sum:{$cond:[{$eq:['$overallStanding','On track']},1,0]}},needsAttention:{$sum:{$cond:[{$eq:['$overallStanding','Needs attention']},1,0]}},atRisk:{$sum:{$cond:[{$eq:['$overallStanding','At risk']},1,0]}},escalated:{$sum:{$cond:[{$eq:['$overallStanding','Escalated']},1,0]}},completedProjects:{$sum:{$cond:[{$eq:['$projectStatus','Completed']},1,0]}},blockedProjects:{$sum:{$cond:[{$eq:['$projectStatus','Blocked']},1,0]}},lmsInactive:{$sum:{$cond:[{$eq:['$lmsStatus','Inactive']},1,0]}}}}]),
     DailyLog.aggregate([{$group:{_id:'$mentor',dailyLogs:{$sum:1},lastDailyLog:{$max:'$date'}}}]),
     Assessment.aggregate([{$group:{_id:'$mentor',assessments:{$sum:1},averageScore:{$avg:'$score'},lastAssessment:{$max:'$date'}}}]),
     WeeklyReview.aggregate([{$group:{_id:'$mentor',weeklyReviews:{$sum:1},lastWeeklyReview:{$max:'$weekStarting'}}}]),
     Action.aggregate([{$group:{_id:'$mentor',openActions:{$sum:{$cond:[{$in:['$status',['Open','In progress','Awaiting response','Escalated']]},1,0]}},lastAction:{$max:'$dateRaised'}}}])
   ]);
-  const byName = new Map(users.map(user => [user.name,{id:user._id,name:user.name,email:user.email,active:user.active,totalFellows:0,onTrack:0,needsAttention:0,atRisk:0,escalated:0,completedProjects:0,blockedProjects:0,lmsInactive:0,dailyLogs:0,assessments:0,averageScore:null,weeklyReviews:0,openActions:0,lastActivity:null}]));
+  const byName = new Map(users.map(user => [user.name,{id:user._id,name:user.name,email:user.email,groups:user.groups||[],active:user.active,totalFellows:0,onTrack:0,needsAttention:0,atRisk:0,escalated:0,completedProjects:0,blockedProjects:0,lmsInactive:0,dailyLogs:0,assessments:0,averageScore:null,weeklyReviews:0,openActions:0,lastActivity:null}]));
   const ensure = name => {
     if (!name) return null;
-    if (!byName.has(name)) byName.set(name,{id:null,name,email:'',active:false,totalFellows:0,onTrack:0,needsAttention:0,atRisk:0,escalated:0,completedProjects:0,blockedProjects:0,lmsInactive:0,dailyLogs:0,assessments:0,averageScore:null,weeklyReviews:0,openActions:0,lastActivity:null});
+    if (!byName.has(name)) byName.set(name,{id:null,name,email:'',groups:[],active:false,totalFellows:0,onTrack:0,needsAttention:0,atRisk:0,escalated:0,completedProjects:0,blockedProjects:0,lmsInactive:0,dailyLogs:0,assessments:0,averageScore:null,weeklyReviews:0,openActions:0,lastActivity:null});
     return byName.get(name);
   };
   for (const row of fellows) {

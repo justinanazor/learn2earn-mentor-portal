@@ -10,7 +10,7 @@ import WeeklyReview from '../models/WeeklyReview.js';
 import Action from '../models/Action.js';
 import { renameMentorReferences } from '../utils/mentor.js';
 const router = Router();
-const publicUser = user => ({ id:user._id, name:user.name, email:user.email, role:user.role, active:user.active });
+const publicUser = user => ({ id:user._id, name:user.name, email:user.email, role:user.role, groups:user.groups||[], active:user.active });
 const createToken = user => jwt.sign({id:user._id,version:user.sessionVersion}, process.env.JWT_SECRET, {expiresIn:'12h'});
 const normalizeEmail = value => String(value || '').trim().toLowerCase();
 const validEmail = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -56,8 +56,8 @@ router.patch('/me', protect, async (req,res) => {
 });
 
 router.get('/mentors', protect, async (_req,res) => {
-  const mentors = await User.find({role:'mentor',active:true}).select('name').sort({name:1}).lean();
-  res.json(mentors.map(mentor => ({name:mentor.name})));
+  const mentors = await User.find({role:'mentor',active:true}).select('name groups').sort({name:1}).lean();
+  res.json(mentors.map(mentor => ({name:mentor.name,groups:mentor.groups||[]})));
 });
 
 export default router;

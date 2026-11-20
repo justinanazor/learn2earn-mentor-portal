@@ -3,7 +3,7 @@ const fellowSchema = new mongoose.Schema({
   fellowId: { type: String, unique: true, sparse: true },
   name: { type: String, required: true, trim: true },
   campus: { type: String, default: 'Abuja' },
-  group: { type: String, default: 'Group B' },
+  group: { type: String, enum: ['Group A','Group B'], default: 'Group B' },
   assignedMentor: { type: String, required: true, trim: true },
   attendanceReliability: { type: String, default: '' },
   currentProject: { type: String, default: '' },
