@@ -63,6 +63,9 @@ Open `http://localhost:5173`.
 ## Main features
 
 - **Dashboard:** roster size, mentor allocation, standing counts, inactive LMS count, blocked projects, open actions and recent assessments.
+- **My profile:** update your name and email, and change your password after verifying the current password.
+- **User management (administrators):** create mentor or administrator accounts, edit roles, deactivate/reactivate accounts, and reset credentials. New and reset passwords must be at least 12 characters.
+- **Mentor progress (administrators):** compare each mentor’s active roster, fellow standing, project outcomes, reporting activity, assessment scores and open actions.
 - **Fellow Register:** create, edit, archive, search, filter, assign mentor and export CSV.
 - **Daily Monitoring:** attendance, daily objective, task completion, LMS activity, project work, 1–5 performance observations, blockers, interventions, evidence and escalation.
 - **Project Tracking:** project status, development mode, AI/vibe-coded contribution and current standing.
@@ -78,11 +81,17 @@ The eight assessment dimensions are equally weighted in this starter implementat
 ## Data model
 
 MongoDB collections: `users`, `fellows`, `dailylogs`, `assessments`, `weeklyreviews`, `actions`.
+Mentor assignments use the name of an active mentor account, so newly created mentor accounts are available in the Fellow Register.
 
 ## API overview
 
 - `POST /api/auth/login`
+- `GET|PATCH /api/auth/me`
+- `GET /api/auth/mentors`
 - `GET /api/dashboard`
+- `GET|POST /api/admin/users`
+- `PATCH /api/admin/users/:id`
+- `GET /api/admin/mentor-progress`
 - `GET|POST /api/fellows`
 - `GET|PATCH|DELETE /api/fellows/:id`
 - `GET /api/fellows/:id/history`
@@ -96,7 +105,7 @@ All endpoints other than login and health check require a JWT bearer token.
 ## Before production deployment
 
 1. Replace all development passwords and use a strong random JWT secret.
-2. Add password reset, account invitation and audit history.
+2. Add email-based account invitations and audit history.
 3. Configure HTTPS, production CORS origins, MongoDB backups and deployment secrets.
 4. Confirm the official assessment framework, reporting fields and data retention policy with Learn2Earn management.
 5. Add pagination and server-side CSV/PDF report generation for larger campuses.

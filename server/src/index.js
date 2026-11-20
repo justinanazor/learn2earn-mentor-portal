@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.js';
 import fellowRoutes from './routes/fellows.js';
 import recordRoutes from './routes/records.js';
 import dashboardRoutes from './routes/dashboard.js';
+import adminRoutes from './routes/admin.js';
 const app=express();
 app.use(helmet());
 app.use(cors({origin:process.env.CLIENT_URL?.split(',')||'http://localhost:5173'}));
@@ -19,8 +20,9 @@ app.get('/api/health',(req,res)=>res.json({status:'ok',service:'Learn2Earn Mento
 app.use('/api/auth',authRoutes);
 app.use('/api',protect);
 app.use('/api/dashboard',dashboardRoutes);
+app.use('/api/admin',adminRoutes);
 app.use('/api/fellows',fellowRoutes);
 app.use('/api/records',recordRoutes);
-app.use((err,req,res,next)=>{console.error(err); if(err.code===11000) return res.status(409).json({message:'A record already exists for this fellow and date.'}); res.status(err.status||500).json({message:err.message||'Server error'});});
+app.use((err,req,res,next)=>{console.error(err); if(err.code===11000){const field=Object.keys(err.keyPattern||{})[0];return res.status(409).json({message:field==='email'?'An account with this email already exists.':field==='name'?'A mentor with this name already exists.':'A record with these values already exists.'});} res.status(err.status||500).json({message:err.message||'Server error'});});
 const port=process.env.PORT||5000;
 connectDB().then(()=>app.listen(port,()=>console.log(`API running on ${port}`))).catch(err=>{console.error('Database connection failed',err);process.exit(1);});
