@@ -7,6 +7,7 @@ export async function protect(req, res, next) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = await User.findById(decoded.id).select('-password');
     if (!req.user || !req.user.active) return res.status(401).json({ message: 'Account unavailable' });
+    if ((decoded.version ?? 0) !== req.user.sessionVersion) return res.status(401).json({ message: 'Session expired. Please sign in again.' });
     next();
   } catch { return res.status(401).json({ message: 'Invalid or expired session' }); }
 }

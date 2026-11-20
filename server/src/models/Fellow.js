@@ -4,7 +4,7 @@ const fellowSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   campus: { type: String, default: 'Abuja' },
   group: { type: String, default: 'Group B' },
-  assignedMentor: { type: String, enum: ['Justin', 'Valentine'], required: true },
+  assignedMentor: { type: String, required: true, trim: true },
   attendanceReliability: { type: String, default: '' },
   currentProject: { type: String, default: '' },
   projectStatus: { type: String, enum: ['Not started','Planning','In progress','Testing','Completed','Blocked'], default: 'Not started' },
