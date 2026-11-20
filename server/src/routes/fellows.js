@@ -41,9 +41,12 @@ router.get('/', async (req,res) => {
 router.post('/', async (req,res) => {
   if (req.user.role !== 'admin') return res.status(403).json({message:'Only administrators can add fellows.'});
   const data = {...req.body};
+  data.name = String(data.name || '').trim();
   data.group = data.group || 'Group B';
+  if (!data.name) return res.status(400).json({message:'Fellow name is required.'});
   if (!groups.includes(data.group)) return res.status(400).json({message:'Select a valid group.'});
   if (!await validateMentor(data.assignedMentor,data.group,res)) return;
+  if (await Fellow.exists({name:data.name,group:data.group})) return res.status(409).json({message:'A fellow with this name already exists in this group.'});
   const count = await Fellow.countDocuments({group:data.group});
   const prefix = data.group === 'Group A' ? 'GA' : 'GB';
   const fellow = await Fellow.create({...data, fellowId:data.fellowId || `${prefix}-${String(count+1).padStart(3,'0')}`});
