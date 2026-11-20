@@ -1,13 +1,17 @@
 # Learn2Earn Mentor Portal (MERN)
 
-A MERN-stack application for managing Group B fellow records, mentor assignments, daily monitoring, project progress, structured assessments, weekly reviews, follow-up actions and KPI visibility.
+A MERN-stack application for managing Group A and Group B fellow records, group-based mentor access, daily monitoring, project progress, structured assessments, weekly reviews, follow-up actions and KPI visibility.
 
 ## Current seed roster
 
 - 43 Group B fellows are seeded from the supplied list.
 - Justin is assigned 22 fellows.
 - Valentine is assigned 21 fellows.
-- Assignments are randomized once in `server/src/seed.js`, then stored in MongoDB. Administrators can change assignments in the Fellow Register.
+- 45 Group A fellows are seeded from the supplied list.
+- Moses is assigned 23 fellows and Wisdom is assigned 22.
+- The Group A split alternates through the supplied roster because individual mentor assignments were not provided. Administrators can change assignments in the Fellow Register.
+- Mentors are assigned to one or more groups by an administrator. A mentor can see fellows and records from their assigned groups; administrators can switch groups in the roster and record pages.
+- Adding fellows is restricted to administrators.
 
 ## Requirements
 
@@ -33,13 +37,13 @@ npm install
 npm run seed
 ```
 
-The seed command creates an administrator, mentor login accounts and the 43 Group B fellows. Initial development credentials are read from `.env`:
+The seed command creates an administrator, four mentor login accounts and both group rosters. Initial development credentials are read from `.env`:
 
 - Admin: `ADMIN_EMAIL` / `ADMIN_PASSWORD`
-- Mentor accounts: `justin@learn2earn.local` and `valentine@learn2earn.local`
+- Mentor accounts: `justin@learn2earn.local`, `valentine@learn2earn.local`, `moses@learn2earn.local` and `wisdom@learn2earn.local`
 - Initial mentor password: `ChangeMe123!`
 
-Change these credentials before sharing or deploying the application. Mentor accounts are scoped to their assigned fellows in the API. The administrator account can access the full campus roster. Change all development credentials before deployment.
+Change these credentials before sharing or deploying the application. Mentor accounts are scoped to their assigned groups in the API. The administrator account can access both groups and manage mentor group assignments. Change all development credentials before deployment.
 
 ### 3. Start the API
 
@@ -62,11 +66,11 @@ Open `http://localhost:5173`.
 
 ## Main features
 
-- **Dashboard:** roster size, mentor allocation, standing counts, inactive LMS count, blocked projects, open actions and recent assessments.
+- **Dashboard:** group-aware roster size, mentor allocation, standing counts, inactive LMS count, blocked projects, open actions and recent assessments.
 - **My profile:** update your name and email, and change your password after verifying the current password.
 - **User management (administrators):** create mentor or administrator accounts, edit roles, deactivate/reactivate accounts, and reset credentials. New and reset passwords must be at least 12 characters.
 - **Mentor progress (administrators):** compare each mentor’s active roster, fellow standing, project outcomes, reporting activity, assessment scores and open actions.
-- **Fellow Register:** create, edit, archive, search, filter, assign mentor and export CSV.
+- **Fellow Register:** administrators can create fellows; users can edit, archive, search, filter, assign mentors within a group and export CSV. Group selection is restricted to the signed-in mentor's assigned groups.
 - **Daily Monitoring:** attendance, daily objective, task completion, LMS activity, project work, 1–5 performance observations, blockers, interventions, evidence and escalation.
 - **Project Tracking:** project status, development mode, AI/vibe-coded contribution and current standing.
 - **Assessments:** eight 1–5 assessment dimensions; a provisional equal-weight score is calculated out of 100, with evidence and improvement plan fields.
@@ -81,7 +85,7 @@ The eight assessment dimensions are equally weighted in this starter implementat
 ## Data model
 
 MongoDB collections: `users`, `fellows`, `dailylogs`, `assessments`, `weeklyreviews`, `actions`.
-Mentor assignments use the name of an active mentor account, so newly created mentor accounts are available in the Fellow Register.
+Mentor accounts store their assigned groups. Fellow mentor assignments use the name of an active mentor account assigned to the same group.
 
 ## API overview
 
@@ -92,7 +96,7 @@ Mentor assignments use the name of an active mentor account, so newly created me
 - `GET|POST /api/admin/users`
 - `PATCH /api/admin/users/:id`
 - `GET /api/admin/mentor-progress`
-- `GET|POST /api/fellows`
+- `GET|POST /api/fellows` (fellow creation is administrator-only; group filters are access-checked)
 - `GET|PATCH|DELETE /api/fellows/:id`
 - `GET /api/fellows/:id/history`
 - `GET|POST|PATCH|DELETE /api/records/daily`

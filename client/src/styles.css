@@ -67,3 +67,12 @@ td{font-size:14px}
 .table-toolbar>span{color:#52697d;font-size:14px}
 .row-actions{flex-wrap:wrap}
 @media(max-width:760px){.admin-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.brand-logo{width:45px;height:45px;flex-shrink:0;object-fit:contain;border-radius:9px;background:#fff;padding:3px}
+.campus-pill{justify-content:flex-start}
+.user-chip{width:100%;color:inherit;text-decoration:none;border-radius:8px;transition:background .15s}
+.user-chip:hover,.user-chip.profile-active{background:#1b3b58}
+.user-chip:focus-visible{outline:2px solid #9cc9e7;outline-offset:2px}
+.group-assignment{border:0;margin:0;padding:0}
+.group-assignment legend{padding:0 0 7px}
+.group-assignment label{display:inline-flex;align-items:center;gap:7px;margin:0 16px 0 0;color:#52687b;font-size:12px}
+.group-assignment input{width:16px;height:16px;accent-color:#176b78}
