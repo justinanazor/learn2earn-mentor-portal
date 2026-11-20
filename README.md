@@ -37,13 +37,13 @@ npm install
 npm run seed
 ```
 
-The seed command creates an administrator, four mentor login accounts and both group rosters. Initial development credentials are read from `.env`:
+The seed command creates an administrator, four mentor login accounts and both group rosters. Run it against the same `MONGODB_URI` used by the API after adding or changing the seed roster; starting the API alone does not insert the roster. Initial development credentials are read from `.env`:
 
 - Admin: `ADMIN_EMAIL` / `ADMIN_PASSWORD`
 - Mentor accounts: `justin@learn2earn.local`, `valentine@learn2earn.local`, `moses@learn2earn.local` and `wisdom@learn2earn.local`
 - Initial mentor password: `ChangeMe123!`
 
-Change these credentials before sharing or deploying the application. Mentor accounts are scoped to their assigned groups in the API. The administrator account can access both groups and manage mentor group assignments. Change all development credentials before deployment.
+The seed command sets the administrator password from `ADMIN_PASSWORD` each time it runs. The initial mentor password is set only when a seeded mentor account is first created. Change these credentials before sharing or deploying the application. Mentor accounts are scoped to their assigned groups in the API. The administrator account can access both groups and manage mentor group assignments.
 
 ### 3. Start the API
 
@@ -68,9 +68,9 @@ Open `http://localhost:5173`.
 
 - **Dashboard:** group-aware roster size, mentor allocation, standing counts, inactive LMS count, blocked projects, open actions and recent assessments.
 - **My profile:** update your name and email, and change your password after verifying the current password.
-- **User management (administrators):** create mentor or administrator accounts, edit roles, deactivate/reactivate accounts, and reset credentials. New and reset passwords must be at least 12 characters.
+- **User management (administrators):** create mentor or administrator accounts, assign mentor groups, edit roles, deactivate/reactivate accounts, delete accounts with assignment safeguards, and reset credentials. New and reset passwords must be at least 12 characters.
 - **Mentor progress (administrators):** compare each mentor’s active roster, fellow standing, project outcomes, reporting activity, assessment scores and open actions.
-- **Fellow Register:** administrators can create fellows; users can edit, archive, search, filter, assign mentors within a group and export CSV. Group selection is restricted to the signed-in mentor's assigned groups.
+- **Fellow Register:** administrators can create fellows individually or import a CSV with `Fellow name` and `Assigned mentor` columns; other fellow fields and the `Group` column are optional. Users can edit, archive, search, filter, assign mentors within a group and export CSV. Group selection is restricted to the signed-in mentor's assigned groups.
 - **Daily Monitoring:** attendance, daily objective, task completion, LMS activity, project work, 1–5 performance observations, blockers, interventions, evidence and escalation.
 - **Project Tracking:** project status, development mode, AI/vibe-coded contribution and current standing.
 - **Assessments:** eight 1–5 assessment dimensions; a provisional equal-weight score is calculated out of 100, with evidence and improvement plan fields.
@@ -95,6 +95,7 @@ Mentor accounts store their assigned groups. Fellow mentor assignments use the n
 - `GET /api/dashboard`
 - `GET|POST /api/admin/users`
 - `PATCH /api/admin/users/:id`
+- `DELETE /api/admin/users/:id`
 - `GET /api/admin/mentor-progress`
 - `GET|POST /api/fellows` (fellow creation is administrator-only; group filters are access-checked)
 - `GET|PATCH|DELETE /api/fellows/:id`

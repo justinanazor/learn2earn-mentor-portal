@@ -76,3 +76,5 @@ td{font-size:14px}
 .group-assignment legend{padding:0 0 7px}
 .group-assignment label{display:inline-flex;align-items:center;gap:7px;margin:0 16px 0 0;color:#52687b;font-size:12px}
 .group-assignment input{width:16px;height:16px;accent-color:#176b78}
+.import-issues{margin-bottom:14px}
+.import-issues ul{margin:8px 0 0;padding-left:22px;line-height:1.6}

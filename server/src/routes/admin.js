@@ -92,6 +92,17 @@ router.patch('/users/:id', async (req,res) => {
   res.json(publicUser(user));
 });
 
+router.delete('/users/:id', async (req,res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({message:'Invalid user ID.'});
+  const user = await User.findById(req.params.id);
+  if (!user) return res.status(404).json({message:'User not found.'});
+  if (user._id.equals(req.user._id)) return res.status(400).json({message:'You cannot delete your own account.'});
+  if (user.role==='admin'&&user.active&&await User.countDocuments({role:'admin',active:true})<=1) return res.status(409).json({message:'The last active administrator cannot be deleted.'});
+  if (user.role==='mentor'&&await Fellow.exists({assignedMentor:user.name,active:true})) return res.status(409).json({message:'Reassign this mentor’s active fellows before deleting the account.'});
+  await user.deleteOne();
+  res.json({message:'User account deleted.'});
+});
+
 router.get('/mentor-progress', async (_req,res) => {
   const [users,fellows,dailyLogs,assessments,weeklyReviews,actions] = await Promise.all([
     User.find({role:'mentor'}).select('_id name email groups active').sort({name:1}).lean(),

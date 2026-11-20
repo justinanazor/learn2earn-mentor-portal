@@ -1,11 +1,11 @@
 import React,{useEffect,useState}from'react';import{Routes,Route,Navigate,NavLink,useNavigate,useLocation}from'react-router-dom';
-import{LayoutDashboard,Users,ClipboardList,FolderKanban,CalendarDays,AlertTriangle,LogOut,Menu,X,Search,Plus,Download,RefreshCw,CheckCircle2,Clock3,BookOpen,Target,ChevronRight,Filter,FileText,ShieldCheck,BarChart3}from'lucide-react';
+import{LayoutDashboard,Users,ClipboardList,FolderKanban,CalendarDays,AlertTriangle,LogOut,Menu,X,Search,Plus,Download,Upload,RefreshCw,CheckCircle2,Clock3,BookOpen,Target,ChevronRight,Filter,FileText,ShieldCheck,BarChart3}from'lucide-react';
 import api from'./lib/api';
 const user=()=>{try{return JSON.parse(localStorage.getItem('l2e_user')||'null')}catch{return null}};
 const GROUPS=['Group A','Group B'];
 function Protected({children}){return localStorage.getItem('l2e_token')?children:<Navigate to="/login" replace/>}
 function AdminOnly({children}){return user()?.role==='admin'?children:<Navigate to="/" replace/>}
-function Login(){const[form,setForm]=useState({email:'admin@learn2earn.local',password:'ChangeMe123!'}),[error,setError]=useState(''),[busy,setBusy]=useState(false),nav=useNavigate();async function submit(e){e.preventDefault();setBusy(true);setError('');try{const{data}=await api.post('/auth/login',form);localStorage.setItem('l2e_token',data.token);localStorage.setItem('l2e_user',JSON.stringify(data.user));nav('/');}catch(err){setError(err.response?.data?.message||'Unable to sign in. Check the API connection.')}finally{setBusy(false)}}return <div className="login-shell"><div className="login-card"><div className="brand-mark">L2E</div><p className="eyebrow">LEARN2EARN · ABUJA CAMPUS</p><h1>Mentor Portal</h1><p className="muted">Sign in to manage fellow progress, assessments and reporting.</p><form onSubmit={submit}><label>Email address<input type="email" required value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></label><label>Password<input type="password" required value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></label>{error&&<div className="error-box">{error}</div>}<button className="primary full" disabled={busy}>{busy?'Signing in…':'Sign in'}</button></form><p className="login-hint">Initial credentials are documented in the project README. Change them before deployment.</p></div></div>}
+function Login(){const[form,setForm]=useState({email:'admin@learn2earn.local',password:'ChangeMe123!'}),[error,setError]=useState(''),[busy,setBusy]=useState(false),nav=useNavigate();async function submit(e){e.preventDefault();setBusy(true);setError('');try{const{data}=await api.post('/auth/login',form);localStorage.setItem('l2e_token',data.token);localStorage.setItem('l2e_user',JSON.stringify(data.user));nav('/');}catch(err){setError(err.response?.data?.message||'Unable to sign in. Check the API connection.')}finally{setBusy(false)}}return <div className="login-shell"><div className="login-card"><div className="brand-mark">L2E</div><p className="eyebrow">LEARN2EARN · ABUJA CAMPUS</p><h1>Mentor Portal</h1><p className="muted">Sign in to manage fellow progress, assessments and reporting.</p><form onSubmit={submit}><label>Email address<input type="email" required value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></label><label>Password<input type="password" required value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></label>{error&&<div className="error-box">{error}</div>}<button className="primary full" disabled={busy}>{busy?'Signing in…':'Sign in'}</button></form><p className="login-hint">Seed the same database used by the API to create the default mentor accounts. Initial credentials are in the project README; change them before deployment.</p></div></div>}
 const logoUrl='https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbd071_22NcEVqZ00Vk48O1R2abn2Vb4XK3nhBWn_mEqC2r_dj_IpRIyeo&s=10';
 const navItems=[['/','Overview',LayoutDashboard],['/fellows','Fellow register',Users],['/daily','Daily monitoring',ClipboardList],['/projects','Project tracking',FolderKanban],['/assessments','Assessments',Target],['/weekly','Weekly reviews',CalendarDays],['/actions','Action register',AlertTriangle],['/admin/mentor-progress','Mentor progress',BarChart3,'admin'],['/admin/users','User management',ShieldCheck,'admin']];
 function Shell({children}){
@@ -64,6 +64,25 @@ function useFellows(initialParams={}){const[data,setData]=useState([]),[busy,set
 function Modal({title,close,children,wide=false}){return <div className="modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&close()}><div className={`modal ${wide?'wide':''}`}><div className="modal-head"><h3>{title}</h3><button className="icon-btn" onClick={close}><X size={19}/></button></div>{children}</div></div>}
 function Field({label,children,wide=false}){return <label className={`field ${wide?'span-2':''}`}>{label}{children}</label>}
 const select=(opts,placeholder='Select…')=><><option value="">{placeholder}</option>{opts.map(o=><option key={o} value={o}>{o}</option>)}</>;
+function parseCSV(text){
+ const rows=[];let row=[],cell='',quoted=false;
+ for(let index=0;index<text.length;index++){
+  const character=text[index];
+  if(character==='"'){
+   if(quoted&&text[index+1]==='"'){cell+='"';index++}
+   else quoted=!quoted;
+  }else if(character===','&&!quoted){row.push(cell);cell=''}
+  else if((character==='\n'||character==='\r')&&!quoted){
+   if(character==='\r'&&text[index+1]==='\n')index++;
+   row.push(cell);if(row.some(value=>value.trim()))rows.push(row);
+   row=[];cell='';
+  }else cell+=character;
+ }
+ if(quoted)throw new Error('The CSV has an unclosed quoted field.');
+ if(cell.length||row.length){row.push(cell);if(row.some(value=>value.trim()))rows.push(row)}
+ return rows;
+}
+const normalizeCSVHeader=value=>String(value||'').replace(/^\uFEFF/,'').trim().toLowerCase().replace(/[^a-z0-9]/g,'');
 function FellowForm({fellow,onClose,onSaved,initialGroup='Group B'}){
  const currentUser=user();
  const defaultGroup=currentUser?.role==='mentor'?(currentUser.groups?.[0]||initialGroup):initialGroup;
@@ -92,15 +111,54 @@ function Fellows(){
  const[group,setGroup]=useState(availableGroups[0]);
  const{data,busy,error,reload}=useFellows({group});
  const[search,setSearch]=useState(''),[mentor,setMentor]=useState(''),[standing,setStanding]=useState(''),[modal,setModal]=useState(null),[message,setMessage]=useState(''),[mentors,setMentors]=useState([]),[mentorError,setMentorError]=useState('');
+ const[importing,setImporting]=useState(false),[importNotice,setImportNotice]=useState(null),[importIssues,setImportIssues]=useState([]);
+ const fileInput=React.useRef(null);
  useEffect(()=>{api.get('/auth/mentors').then(({data})=>setMentors(data)).catch(err=>setMentorError(err.response?.data?.message||'Unable to load mentor accounts'))},[]);
  const mentorNames=mentors.filter(item=>item.groups?.includes(group)).map(item=>item.name);
  const filtered=data.filter(f=>(!group||f.group===group)&&(!search||f.name.toLowerCase().includes(search.toLowerCase()))&&(!mentor||f.assignedMentor===mentor)&&(!standing||f.overallStanding===standing));
  async function archive(fellow){if(!confirm(`Archive ${fellow.name}?`))return;try{await api.delete(`/fellows/${fellow._id}`);setMessage('Fellow archived');reload({group})}catch(error){setMessage(error.response?.data?.message||'Unable to archive fellow')}}
  function exportCSV(){const rows=[['Fellow ID','Name','Group','Mentor','Project','Project status','LMS status','Standing'],...filtered.map(fellow=>[fellow.fellowId,fellow.name,fellow.group,fellow.assignedMentor,fellow.currentProject,fellow.projectStatus,fellow.lmsStatus,fellow.overallStanding])];const csv=rows.map(row=>row.map(value=>`"${String(value??'').replaceAll('"','""')}"`).join(',')).join('\n');const anchor=document.createElement('a');anchor.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));anchor.download=`learn2earn-${group.toLowerCase().replace(' ','-')}-fellows.csv`;anchor.click();URL.revokeObjectURL(anchor.href)}
- return <><PageTitle title="Fellow register" sub="Manage the roster, mentor assignments and each fellow's current performance profile." action={<><button className="secondary" onClick={exportCSV}><Download size={16}/> Export CSV</button>{currentUser?.role==='admin'&&<button className="primary" onClick={()=>setModal({})}><Plus size={17}/> Add fellow</button>}</>}/>
+ function downloadCSVTemplate(){const anchor=document.createElement('a');anchor.href=URL.createObjectURL(new Blob(['Fellow name,Assigned mentor\n'],{type:'text/csv'}));anchor.download=`${group.toLowerCase().replace(' ','-')}-fellows-template.csv`;anchor.click();URL.revokeObjectURL(anchor.href)}
+ async function importCSV(event){
+  const file=event.target.files?.[0];if(!file)return;
+  setImportNotice(null);setImportIssues([]);setMessage('');
+  try{
+   const records=parseCSV((await file.text()).replace(/^\uFEFF/,''));
+   if(!records.length)throw new Error('The CSV file is empty.');
+   if(records.length<2)throw new Error('The CSV contains headers but no fellow rows.');
+   if(records.length>501)throw new Error('Import up to 500 fellows at a time.');
+   const headers=records[0].map(normalizeCSVHeader);
+   const nameIndex=headers.findIndex(header=>['fellowname','name'].includes(header));
+   const mentorIndex=headers.findIndex(header=>['assignedmentor','mentor'].includes(header));
+   if(nameIndex<0||mentorIndex<0)throw new Error('CSV headers must include “Fellow name” and “Assigned mentor”.');
+   const fields={group:'group',campus:'campus',fellowid:'fellowId',currentproject:'currentProject',projectstatus:'projectStatus',developmentmode:'developmentMode',aicontribution:'aiContribution',lmsstatus:'lmsStatus',learningprogress:'learningProgress',overallstanding:'overallStanding',strengths:'strengths',performancegap:'performanceGap',evidencelink:'evidenceLink',codingmentorremark:'codingMentorRemark',attendancereliability:'attendanceReliability'};
+   const rows=records.slice(1);let created=0;const issues=[];
+   setImporting(true);
+   for(let index=0;index<rows.length;index++){
+    const row=rows[index],rowNumber=index+2;
+    const valueAt=column=>String(row[column]||'').trim();
+    const name=valueAt(nameIndex),assignedMentor=valueAt(mentorIndex);
+    if(!name||!assignedMentor){issues.push(`Row ${rowNumber}: Fellow name and Assigned mentor are required.`);continue}
+    const payload={name,assignedMentor,group};
+    headers.forEach((header,column)=>{
+     const key=fields[header],value=valueAt(column);
+     if(key&&value)payload[key]=key==='group'?(value.toLowerCase()==='group a'?'Group A':value.toLowerCase()==='group b'?'Group B':value):value;
+    });
+    try{await api.post('/fellows',payload);created++}
+    catch(error){issues.push(`Row ${rowNumber} (${name}): ${error.response?.data?.message||'Unable to import this fellow.'}`)}
+   }
+   setImportIssues(issues.slice(0,20));
+   setImportNotice({failed:issues.length>0,text:`Imported ${created} fellow${created===1?'':'s'}${issues.length?`; ${issues.length} row${issues.length===1?'':'s'} need attention`:'.'}`});
+   if(created)reload({group});
+  }catch(error){setImportNotice({failed:true,text:error.message||'Unable to read this CSV file.'})}
+  finally{setImporting(false);event.target.value=''}
+ }
+ return <><PageTitle title="Fellow register" sub="Manage the roster, mentor assignments and each fellow's current performance profile." action={<><button className="secondary" onClick={exportCSV}><Download size={16}/> Export CSV</button>{currentUser?.role==='admin'&&<><button className="secondary" disabled={importing} onClick={()=>fileInput.current?.click()}><Upload size={16}/>{importing?'Importing…':'Import CSV'}</button><button className="secondary" onClick={downloadCSVTemplate}><Download size={16}/> CSV template</button><input ref={fileInput} type="file" accept=".csv,text/csv" hidden onChange={importCSV}/><button className="primary" onClick={()=>setModal({})}><Plus size={17}/> Add fellow</button></>}</>}/>
   {message&&<div className="success-box">{message}<button onClick={()=>setMessage('')}>Dismiss</button></div>}{mentorError&&<div className="error-box">{mentorError}</div>}
+  {importNotice&&<div className={importNotice.failed?'error-box':'success-box'}>{importNotice.text}</div>}
+  {importIssues.length>0&&<div className="error-box import-issues"><strong>First {importIssues.length} import issue{importIssues.length===1?'':'s'}:</strong><ul>{importIssues.map((issue,index)=><li key={index}>{issue}</li>)}</ul></div>}
   <div className="panel table-panel"><div className="table-toolbar"><div className="searchbox"><Search size={17}/><input placeholder="Search fellows by name…" value={search} onChange={event=>setSearch(event.target.value)}/></div>{availableGroups.length>1&&<select value={group} onChange={event=>{setGroup(event.target.value);setMentor('');reload({group:event.target.value})}} aria-label="Group">{availableGroups.map(value=><option key={value} value={value}>{value}</option>)}</select>}<select value={mentor} onChange={event=>setMentor(event.target.value)}>{select(mentorNames,'All mentors')}</select><select value={standing} onChange={event=>setStanding(event.target.value)}>{select(['On track','Needs attention','At risk','Escalated'],'All standings')}</select><button className="icon-btn" onClick={()=>reload({group})}><RefreshCw size={17}/></button></div>
-   {busy?<div className="loading">Loading fellows…</div>:error?<div className="error-box">{error}</div>:<div className="table-wrap"><table><thead><tr><th>Fellow</th><th>Group</th><th>Mentor</th><th>Project</th><th>LMS</th><th>Standing</th><th>Actions</th></tr></thead><tbody>{filtered.map(fellow=><tr key={fellow._id}><td><div className="name-cell"><b>{fellow.name}</b><small>{fellow.fellowId}</small></div></td><td>{fellow.group}</td><td>{fellow.assignedMentor}</td><td><div className="name-cell"><span>{fellow.currentProject||'Not specified'}</span><small>{fellow.projectStatus}</small></div></td><td><Badge>{fellow.lmsStatus}</Badge></td><td><Badge>{fellow.overallStanding}</Badge></td><td><div className="row-actions"><button onClick={()=>setModal(fellow)}>Edit</button><button className="danger-text" onClick={()=>archive(fellow)}>Archive</button></div></td></tr>)}</tbody></table>{!filtered.length&&<Empty text="No fellows match these filters."/>}</div>}
+   {busy?<div className="loading">Loading fellows…</div>:error?<div className="error-box">{error}</div>:<div className="table-wrap"><table><thead><tr><th>Fellow</th><th>Group</th><th>Mentor</th><th>Project</th><th>LMS</th><th>Standing</th><th>Actions</th></tr></thead><tbody>{filtered.map(fellow=><tr key={fellow._id}><td><div className="name-cell"><b>{fellow.name}</b><small>{fellow.fellowId}</small></div></td><td>{fellow.group}</td><td>{fellow.assignedMentor}</td><td><div className="name-cell"><span>{fellow.currentProject||'Not specified'}</span><small>{fellow.projectStatus}</small></div></td><td><Badge>{fellow.lmsStatus}</Badge></td><td><Badge>{fellow.overallStanding}</Badge></td><td><div className="row-actions"><button onClick={()=>setModal(fellow)}>Edit</button><button className="danger-text" onClick={()=>archive(fellow)}>Archive</button></div></td></tr>)}</tbody></table>{!filtered.length&&<Empty text={data.length?'No fellows match these filters.':currentUser?.role==='admin'?`No fellows loaded for ${group}. Run npm run seed in the server directory using the same MONGODB_URI as the API to load the seeded roster and mentor accounts.`:'No fellows are currently available in your assigned group.'}/>}</div>}
    <div className="table-foot">Showing {filtered.length} of {data.length} active fellows</div>
   </div>{modal&&<FellowForm fellow={modal._id?modal:null} initialGroup={group} onClose={()=>setModal(null)} onSaved={()=>{reload({group});setMessage('Fellow record saved')}}/>}
  </>
@@ -244,11 +302,17 @@ function AdminUsers(){
   setError('');setMessage('');
   try{await api.patch(`/admin/users/${account.id}`,{active:!account.active});setMessage(`${account.name}'s account was ${account.active?'deactivated':'reactivated'}.`);await load()}catch(err){setError(err.response?.data?.message||`Unable to ${action} this account`)}
  }
+ async function deleteUser(account){
+  if(!window.confirm(`Permanently delete ${account.name}'s account? This cannot be undone.`))return;
+  setError('');setMessage('');
+  try{await api.delete(`/admin/users/${account.id}`);setMessage(`${account.name}'s account was deleted.`);await load()}
+  catch(err){setError(err.response?.data?.message||'Unable to delete this account')}
+ }
  const currentId=user()?.id;
  return <><PageTitle title="User management" sub="Create accounts, assign mentor groups and roles, and reset credentials." action={<button className="primary" onClick={()=>openForm()}><Plus size={16}/> Add user</button>}/>
   {message&&<div className="success-box">{message}</div>}{error&&!showForm&&<div className="error-box">{error}</div>}
   <section className="panel table-panel"><div className="table-toolbar"><span>{users.length} accounts</span><button className="icon-btn" onClick={load} aria-label="Refresh users"><RefreshCw size={17}/></button></div>
-   {busy?<div className="loading">Loading user accounts…</div>:<div className="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Groups</th><th>Status</th><th>Actions</th></tr></thead><tbody>{users.map(account=><tr key={account.id}><td className="name-cell"><b>{account.name}</b></td><td>{account.email}</td><td><span className="badge">{account.role}</span></td><td>{account.groups?.length?account.groups.join(', '):'—'}</td><td><span className={`badge ${account.active?'present':'inactive'}`}>{account.active?'Active':'Inactive'}</span></td><td><div className="row-actions">{account.id!==currentId?<><button onClick={()=>openForm(account)}>Edit / reset password</button><button className={account.active?'danger-text':''} onClick={()=>toggleActive(account)}>{account.active?'Deactivate':'Reactivate'}</button></>:'Use My profile'}</div></td></tr>)}</tbody></table>{!users.length&&<Empty text="No user accounts found."/>}</div>}
+   {busy?<div className="loading">Loading user accounts…</div>:<div className="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Groups</th><th>Status</th><th>Actions</th></tr></thead><tbody>{users.map(account=><tr key={account.id}><td className="name-cell"><b>{account.name}</b></td><td>{account.email}</td><td><span className="badge">{account.role}</span></td><td>{account.groups?.length?account.groups.join(', '):'—'}</td><td><span className={`badge ${account.active?'present':'inactive'}`}>{account.active?'Active':'Inactive'}</span></td><td><div className="row-actions">{account.id!==currentId?<><button onClick={()=>openForm(account)}>Edit / reset password</button><button className={account.active?'danger-text':''} onClick={()=>toggleActive(account)}>{account.active?'Deactivate':'Reactivate'}</button><button className="danger-text" onClick={()=>deleteUser(account)}>Delete</button></>:'Use My profile'}</div></td></tr>)}</tbody></table>{!users.length&&<Empty text="No user accounts found."/>}</div>}
   </section>
   {showForm&&<Modal title={editing?'Edit user account':'Add user account'} close={()=>setShowForm(false)}><form className="form-grid" onSubmit={save}>
    <Field label="Full name"><input required maxLength="120" value={form.name} onChange={event=>setForm({...form,name:event.target.value})}/></Field>
