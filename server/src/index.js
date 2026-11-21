@@ -12,6 +12,7 @@ import recordRoutes from './routes/records.js';
 import dashboardRoutes from './routes/dashboard.js';
 import adminRoutes from './routes/admin.js';
 const app=express();
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) throw new Error('JWT_SECRET must be set to a random value of at least 32 characters.');
 app.use(helmet());
 app.use(cors({origin:process.env.CLIENT_URL?.split(',')||'http://localhost:5173'}));
 app.use(express.json({limit:'2mb'}));

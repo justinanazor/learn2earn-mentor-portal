@@ -28,7 +28,7 @@ cd server
 cp .env.example .env
 ```
 
-Edit `server/.env` and set `MONGODB_URI`, `JWT_SECRET`, and a strong `ADMIN_PASSWORD`.
+Edit `server/.env` and set `MONGODB_URI`, a random `JWT_SECRET` of at least 32 characters, and a unique `ADMIN_PASSWORD` of at least 12 characters. These values are required; do not commit `.env`.
 
 ### 2. Install dependencies and seed the database
 
@@ -37,13 +37,9 @@ npm install
 npm run seed
 ```
 
-The seed command creates an administrator, four mentor login accounts and both group rosters. Run it against the same `MONGODB_URI` used by the API after adding or changing the seed roster; starting the API alone does not insert the roster. Initial development credentials are read from `.env`:
+The seed command creates an administrator, four mentor accounts and both group rosters. Run it against the same `MONGODB_URI` used by the API after adding or changing the seed roster; starting the API alone does not insert the roster. The administrator password is read from `.env`. Mentor passwords are generated randomly and are not printed or displayed; sign in as the administrator and set unique passwords for mentor accounts in User Management before sharing access.
 
-- Admin: `ADMIN_EMAIL` / `ADMIN_PASSWORD`
-- Mentor accounts: `justin@learn2earn.local`, `valentine@learn2earn.local`, `moses@learn2earn.local` and `wisdom@learn2earn.local`
-- Initial mentor password: `ChangeMe123!`
-
-The seed command sets the administrator password from `ADMIN_PASSWORD` each time it runs. The initial mentor password is set only when a seeded mentor account is first created. Change these credentials before sharing or deploying the application. Mentor accounts are scoped to their assigned groups in the API. The administrator account can access both groups and manage mentor group assignments.
+The seed command sets the administrator password from `ADMIN_PASSWORD` each time it runs. Existing mentor accounts keep their current passwords when seeding; reset any previously seeded development passwords before deployment. Mentor accounts are scoped to their assigned groups in the API. The administrator account can access both groups and manage mentor group assignments.
 
 ### 3. Start the API
 
