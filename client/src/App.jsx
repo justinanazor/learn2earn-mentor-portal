@@ -197,7 +197,7 @@ function AmbientBackground({theme}){
   let width=0,height=0,frame=0,lastTime=0,lastDraw=0,baseCanvas,baseContext,nodes=[],edges=[],lights=[];
   const motion=window.matchMedia('(prefers-reduced-motion: reduce)');
   const dark=theme==='dark',radius=72,stepX=radius*1.5,stepY=Math.sqrt(3)*radius;
-  const palette=[184,171,258,322],trailDuration=1.8,frameInterval=1000/30;
+  const palette=[184,171,258,322],trailDuration=1.8,frameInterval=100/30;
   function makeLight(delay,hue){
    const candidates=nodes.map((node,index)=>node.neighbors.length?index:-1).filter(index=>index>=0);
    const from=candidates[Math.floor(Math.random()*candidates.length)];
@@ -245,7 +245,7 @@ function AmbientBackground({theme}){
     const from=nodes[edge.from],to=nodes[edge.to];
     baseContext.moveTo(from.x,from.y);baseContext.lineTo(to.x,to.y);
    }
-   baseContext.strokeStyle=dark?'rgba(147,165,197,.16)':'rgba(72,94,129,.13)';
+   baseContext.strokeStyle=dark?'rgba(150, 196, 153, 0.16)':'rgba(72,94,129,.13)';
    baseContext.lineWidth=1.1;baseContext.stroke();
   }
   function renderStatic(){
@@ -289,7 +289,7 @@ function AmbientBackground({theme}){
    frame=0;
    if(document.hidden)return;
    if(timestamp-lastDraw<frameInterval-1){frame=requestAnimationFrame(draw);return}
-   const delta=lastTime?Math.min((timestamp-lastTime)/1000,.05):0;
+   const delta=lastTime?Math.min((timestamp-lastTime)/100,.05):0;
    lastTime=timestamp;lastDraw=timestamp;
    context.clearRect(0,0,width,height);context.drawImage(baseCanvas,0,0,width,height);
    for(const light of lights){
@@ -300,7 +300,7 @@ function AmbientBackground({theme}){
     }
     const from=nodes[light.from],to=nodes[light.to],progress=light.progress;
     const headX=from.x+(to.x-from.x)*progress,headY=from.y+(to.y-from.y)*progress;
-    const tail=Math.min(.16,progress),tailX=from.x+(to.x-from.x)*(progress-tail),tailY=from.y+(to.y-from.y)*(progress-tail);
+    const tail=Math.min(.9,progress),tailX=from.x+(to.x-from.x)*(progress-tail),tailY=from.y+(to.y-from.y)*(progress-tail);
     context.beginPath();context.moveTo(tailX,tailY);context.lineTo(headX,headY);
     context.strokeStyle=`hsla(${light.hue},55%,${dark?70:48}%,.42)`;context.lineWidth=2;context.shadowColor=`hsla(${light.hue},65%,60%,.6)`;context.shadowBlur=5;context.stroke();context.shadowBlur=0;
     context.beginPath();context.arc(headX,headY,2.1,0,Math.PI*2);
