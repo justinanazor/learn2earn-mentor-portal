@@ -78,3 +78,53 @@ td{font-size:14px}
 .group-assignment input{width:16px;height:16px;accent-color:#176b78}
 .import-issues{margin-bottom:14px}
 .import-issues ul{margin:8px 0 0;padding-left:22px;line-height:1.6}
+
+.app-root{position:relative;isolation:isolate;min-height:100vh;background:#f2f6fc;color:#172b3e;transition:background-color .25s ease,color .25s ease}
+.app-root .ambient-background{z-index:0;pointer-events:none;background:radial-gradient(ellipse at 18% 0%,#fff 0%,transparent 42%),linear-gradient(135deg,#f2f6fc,#e8eff8 58%,#f7f4fb);animation:none}
+.app-root .app-shell,.app-root .login-shell{position:relative;z-index:1}
+.app-root .topbar{padding-right:18px;background:rgba(255,255,255,.72);border-color:rgba(204,216,232,.72);backdrop-filter:blur(20px) saturate(150%)}
+.app-root .panel,.app-root .stat-card,.app-root .login-card,.app-root .modal{background:rgba(255,255,255,.78);border-color:rgba(255,255,255,.82);backdrop-filter:blur(18px) saturate(145%);box-shadow:0 12px 35px rgba(37,61,97,.08),inset 0 1px rgba(255,255,255,.85)}
+.app-root .stat-card,.app-root .panel{transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}
+.app-root .primary,.app-root .secondary,.app-root .table-button,.app-root .theme-toggle{background-image:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 85%);box-shadow:0 5px 16px rgba(30,57,90,.12),inset 0 1px rgba(255,255,255,.38);transition:transform .18s ease,box-shadow .18s ease,background-color .18s ease}
+.app-root .primary:hover,.app-root .secondary:hover,.app-root .table-button:hover,.app-root .theme-toggle:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(30,57,90,.18),inset 0 1px rgba(255,255,255,.45)}
+.app-root .theme-toggle{width:40px;height:40px;flex:0 0 40px;border:1px solid rgba(133,155,190,.25);border-radius:50%;display:grid;place-items:center;color:#455f86;background-color:rgba(255,255,255,.74)}
+.app-root .theme-toggle:focus-visible{outline:3px solid #8878ec;outline-offset:3px}
+.app-root .topbar{gap:16px}
+.app-root .topbar-right{margin-left:auto}
+.app-root .stat-card:hover,.app-root .panel:hover{transform:translateY(-2px);border-color:rgba(145,164,203,.42);box-shadow:0 16px 38px rgba(37,61,97,.12),inset 0 1px rgba(255,255,255,.88)}
+.app-root .ambient-background canvas{opacity:.64}
+.app-root.theme-dark .ambient-background canvas{opacity:.76}
+.app-root.theme-dark{background:#090e1b;color:#e5eaf5}
+.app-root.theme-dark .ambient-background{background:radial-gradient(ellipse at 18% 0%,#17233b 0%,transparent 48%),linear-gradient(135deg,#090e1b,#101426 58%,#171125)}
+.app-root.theme-dark .topbar,.app-root.theme-dark .panel,.app-root.theme-dark .stat-card,.app-root.theme-dark .login-card,.app-root.theme-dark .modal,.app-root.theme-dark .modal-head{background:rgba(17,25,43,.78);border-color:rgba(119,139,177,.2);color:#e5eaf5;box-shadow:0 14px 40px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.07)}
+.app-root.theme-dark .topbar{border-bottom-color:rgba(119,139,177,.2)}
+.app-root.theme-dark .sidebar{background:#0b1425}
+.app-root.theme-dark .campus-pill{background:rgba(74,96,137,.16);border-color:rgba(146,165,203,.18)}
+.app-root.theme-dark .topbar h2,.app-root.theme-dark .page-title h1,.app-root.theme-dark .stat-card strong,.app-root.theme-dark .panel-head h3,.app-root.theme-dark .mentor-row>strong,.app-root.theme-dark .signal-list b,.app-root.theme-dark .modal-head h3,.app-root.theme-dark .login-card h1,.app-root.theme-dark .mentor-info b,.app-root.theme-dark .compact-row b,.app-root.theme-dark .name-cell b{color:#ecf1fb}
+.app-root.theme-dark .topbar-right,.app-root.theme-dark .page-title p,.app-root.theme-dark .eyebrow,.app-root.theme-dark .panel-head p,.app-root.theme-dark .stat-card span,.app-root.theme-dark .stat-card small,.app-root.theme-dark .mentor-info small,.app-root.theme-dark .compact-row small,.app-root.theme-dark .name-cell small,.app-root.theme-dark .split-note,.app-root.theme-dark .signal-list span,.app-root.theme-dark .muted,.app-root.theme-dark .login-hint,.app-root.theme-dark .profile-password-note{color:#aab8d0}
+.app-root.theme-dark .theme-toggle,.app-root.theme-dark .secondary,.app-root.theme-dark .table-button,.app-root.theme-dark .icon-btn{background-color:rgba(47,62,91,.62);border-color:rgba(151,168,204,.24);color:#dce7fb}
+.app-root.theme-dark .primary{background-color:#5750ba;color:#fff}
+.app-root.theme-dark .text-link,.app-root.theme-dark .row-actions button,.app-root.theme-dark .danger-text{color:#91d9e7}
+.app-root.theme-dark .searchbox,.app-root.theme-dark .table-toolbar select,.app-root.theme-dark .field input,.app-root.theme-dark .field select,.app-root.theme-dark .field textarea,.app-root.theme-dark .login-card input{background:rgba(9,15,28,.76);border-color:rgba(134,153,190,.28);color:#e4ebf8}
+.app-root.theme-dark .searchbox input{background:transparent;color:#e4ebf8}
+.app-root.theme-dark .table-toolbar{border-color:rgba(119,139,177,.18)}
+.app-root.theme-dark th{background:rgba(31,43,66,.8);border-color:rgba(119,139,177,.2);color:#aab8d0}
+.app-root.theme-dark td{border-color:rgba(119,139,177,.14);color:#c2cde0}
+.app-root.theme-dark tbody tr:hover{background:rgba(94,117,166,.12)}
+.app-root.theme-dark .main-area footer{border-color:rgba(119,139,177,.2);color:#8998b2}
+.app-root.theme-dark .modal-head{background:rgba(17,25,43,.96)}
+.app-root.theme-dark .modal-backdrop{background:rgba(3,7,16,.76)}
+.app-root.theme-dark .field,.app-root.theme-dark .login-card label{color:#bdc9dc}
+.app-root.theme-dark .signal-list>div,.app-root.theme-dark .compact-row,.app-root.theme-dark .split-note{border-color:rgba(119,139,177,.16)}
+.app-root.theme-dark .empty-icon{background:rgba(98,119,160,.16);color:#aab8d0}
+.app-root.theme-dark .login-shell{background:transparent}
+@media(hover:hover){
+ .app-root .primary:active,.app-root .secondary:active,.app-root .table-button:active,.app-root .theme-toggle:active{transform:translateY(1px) scale(.98)}
+}
+@media(max-width:760px){
+ .app-root .topbar{padding-right:14px}
+ .app-root .theme-toggle{width:38px;height:38px;flex-basis:38px}
+}
+@media(prefers-reduced-motion:reduce){
+ .app-root,.app-root *{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
+}

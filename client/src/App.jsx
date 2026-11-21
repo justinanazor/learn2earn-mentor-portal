@@ -1,5 +1,5 @@
 import React,{useEffect,useState}from'react';import{Routes,Route,Navigate,NavLink,useNavigate,useLocation}from'react-router-dom';
-import{LayoutDashboard,Users,ClipboardList,FolderKanban,CalendarDays,AlertTriangle,LogOut,Menu,X,Search,Plus,Download,Upload,RefreshCw,CheckCircle2,Clock3,BookOpen,Target,ChevronRight,Filter,FileText,ShieldCheck,BarChart3}from'lucide-react';
+import{LayoutDashboard,Users,ClipboardList,FolderKanban,CalendarDays,AlertTriangle,LogOut,Menu,X,Search,Plus,Download,Upload,RefreshCw,CheckCircle2,Clock3,BookOpen,Target,ChevronRight,Filter,FileText,ShieldCheck,BarChart3,Sun,Moon}from'lucide-react';
 import api from'./lib/api';
 const user=()=>{try{return JSON.parse(localStorage.getItem('l2e_user')||'null')}catch{return null}};
 const GROUPS=['Group A','Group B'];
@@ -8,7 +8,7 @@ function AdminOnly({children}){return user()?.role==='admin'?children:<Navigate 
 function Login(){const[form,setForm]=useState({email:'',password:''}),[error,setError]=useState(''),[busy,setBusy]=useState(false),nav=useNavigate();async function submit(e){e.preventDefault();setBusy(true);setError('');try{const{data}=await api.post('/auth/login',form);localStorage.setItem('l2e_token',data.token);localStorage.setItem('l2e_user',JSON.stringify(data.user));nav('/');}catch(err){setError(err.response?.data?.message||'Unable to sign in. Check the API connection.')}finally{setBusy(false)}}return <div className="login-shell"><div className="login-card"><div className="brand-mark">L2E</div><p className="eyebrow">LEARN2EARN · ABUJA CAMPUS</p><h1>Mentor Portal</h1><p className="muted">Sign in to manage fellow progress, assessments and reporting.</p><form onSubmit={submit}><label>Email address<input type="email" required value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></label><label>Password<input type="password" required value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></label>{error&&<div className="error-box">{error}</div>}<button className="primary full" disabled={busy}>{busy?'Signing in…':'Sign in'}</button></form><p className="login-hint">Ask your administrator for your sign-in credentials.</p></div></div>}
 const logoUrl='https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbd071_22NcEVqZ00Vk48O1R2abn2Vb4XK3nhBWn_mEqC2r_dj_IpRIyeo&s=10';
 const navItems=[['/','Overview',LayoutDashboard],['/fellows','Fellow register',Users],['/daily','Daily monitoring',ClipboardList],['/projects','Project tracking',FolderKanban],['/assessments','Assessments',Target],['/weekly','Weekly reviews',CalendarDays],['/actions','Action register',AlertTriangle],['/admin/mentor-progress','Mentor progress',BarChart3,'admin'],['/admin/users','User management',ShieldCheck,'admin']];
-function Shell({children}){
+function Shell({children,theme,onToggleTheme}){
  const[u,setU]=useState(user()),[open,setOpen]=useState(false),loc=useLocation(),nav=useNavigate();
  useEffect(()=>setOpen(false),[loc.pathname]);
  useEffect(()=>{const update=()=>setU(user());window.addEventListener('l2e-profile-updated',update);return()=>window.removeEventListener('l2e-profile-updated',update)},[]);
@@ -33,6 +33,7 @@ function Shell({children}){
      <button className="icon-btn mobile-menu" onClick={()=>setOpen(true)}><Menu/></button>
      <div>{u?.role==='mentor'&&<p className="eyebrow">{(u.groups||['Group B']).join(' · ').toUpperCase()}</p>}<h2>{loc.pathname==='/profile'?'Profile settings':navItems.find(x=>x[0]===loc.pathname)?.[1]||'Mentor Portal'}</h2></div>
      <div className="topbar-right"><span className="live-dot">●</span><span>{u?.role==='admin'?'Management workspace':'Mentor workspace'}</span><div className="avatar top-avatar">{u?.name?.slice(0,1)||'M'}</div></div>
+     <button className="theme-toggle" type="button" onClick={onToggleTheme} aria-label={`Switch to ${theme==='dark'?'light':'dark'} mode`} title={`Switch to ${theme==='dark'?'light':'dark'} mode`}>{theme==='dark'?<Sun size={19}/>:<Moon size={19}/>}</button>
     </header>
     <div className="page-content">{children}</div>
     <footer>Learn2Earn Mentor Portal <span>·</span> Evidence-led mentorship and accountability</footer>
@@ -188,66 +189,139 @@ function RecordPage({kind}){
 function ProjectTable({rows,onEdit}){return <div className="table-wrap"><table><thead><tr><th>Fellow</th><th>Mentor</th><th>Project</th><th>Development mode</th><th>AI contribution</th><th>Status</th><th>Standing</th><th></th></tr></thead><tbody>{rows.map(f=><tr key={f._id}><td><b>{f.name}</b></td><td>{f.assignedMentor}</td><td>{f.currentProject||'Not specified'}</td><td>{f.developmentMode||'Not recorded'}</td><td>{f.aiContribution||'Not recorded'}</td><td><Badge>{f.projectStatus}</Badge></td><td><Badge>{f.overallStanding}</Badge></td><td><button className="table-button" onClick={()=>onEdit(f)}>Update</button></td></tr>)}</tbody></table>{!rows.length&&<Empty text="No project records found."/>}</div>}
 function RecordTable({kind,rows,onDelete}){const fields={daily:[['fellow','Fellow'],['date','Date'],['mentor','Mentor'],['attendance','Attendance'],['taskStatus','Task'],['lmsStatus','LMS'],['projectStatus','Project']],assessments:[['fellow','Fellow'],['date','Date'],['mentor','Mentor'],['score','Score'],['outcome','Outcome']],weekly:[['fellow','Fellow'],['weekStarting','Week starting'],['mentor','Mentor'],['projectStatus','Project status'],['managementIntervention','Management support']],actions:[['fellow','Fellow'],['dateRaised','Date raised'],['mentor','Mentor'],['priority','Priority'],['issue','Issue'],['dueDate','Due date'],['status','Status']]}[kind];return <div className="table-wrap"><table><thead><tr>{fields.map(([k,l])=><th key={k}>{l}</th>)}<th>Action</th></tr></thead><tbody>{rows.map(r=><tr key={r._id}>{fields.map(([k])=><td key={k}>{k==='fellow'?r.fellow?.name||'—':k.toLowerCase().includes('date')||k==='weekStarting'?r[k]?new Date(r[k]).toLocaleDateString():'—':k==='score'?r[k]!=null?`${r[k]}%`:'Pending':typeof r[k]==='boolean'?r[k]?'Yes':'No':r[k]||'—'}</td>)}<td><button className="danger-text" onClick={()=>onDelete(r._id)}>Delete</button></td></tr>)}</tbody></table>{!rows.length&&<Empty text="No records yet. Use the button above to create the first entry."/>}</div>}
 function RecordForm({kind,fellows,onClose,onSaved}){const[f,setF]=useState({date:new Date().toISOString().slice(0,10),weekStarting:'',weekEnding:'',mentor:'Justin',attendance:'Present',taskStatus:'Not assigned',lmsStatus:'Not checked',projectStatus:'In progress',priority:'Medium',status:'Open',managementIntervention:false,escalationRequired:false,developmentMode:'Developed from scratch',aiContribution:'0%'}),[busy,setBusy]=useState(false),[err,setErr]=useState('');const set=(k,v)=>setF(p=>({...p,[k]:v}));const chosen=fellows.find(x=>x._id===f.fellow);async function submit(e){e.preventDefault();setBusy(true);setErr('');try{const payload={...f,mentor:chosen?.assignedMentor||f.mentor};await api.post(`/records/${kind}`,payload);onSaved()}catch(e){setErr(e.response?.data?.message||'Unable to save. Check required fields and duplicate date entries.')}finally{setBusy(false)}}const field=(label,key,type='text',opts=null,wide=false)=><Field label={label} wide={wide}>{opts?<select value={f[key]??''} onChange={e=>set(key,e.target.value)}>{select(opts)}</select>:type==='textarea'?<textarea rows="2" value={f[key]||''} onChange={e=>set(key,e.target.value)}/>:type==='checkbox'?<input type="checkbox" checked={!!f[key]} onChange={e=>set(key,e.target.checked)}/>:<input type={type} value={f[key]??''} onChange={e=>set(key,e.target.value)} />}</Field>;return <Modal title={kind==='daily'?'Record daily monitoring':kind==='assessments'?'New fellow assessment':kind==='weekly'?'Create weekly review':'Create follow-up action'} close={onClose} wide><form className="form-grid" onSubmit={submit}><Field label="Fellow"><select required value={f.fellow||''} onChange={e=>set('fellow',e.target.value)}><option value="">Select fellow…</option>{fellows.map(x=><option key={x._id} value={x._id}>{x.name} · {x.assignedMentor}</option>)}</select></Field>{kind==='daily'&&<>{field('Date','date','date')}{field('Attendance','attendance','text',['Present','Absent','Late','Approved absence'])}{field('Daily objective / assigned task','objective','textarea',null,true)}{field('Task status','taskStatus','text',['Completed','Partially completed','Not completed','Not assigned'])}{field('Learning / LMS activity','learningActivity','textarea',null,true)}{field('LMS status','lmsStatus','text',['On track','Behind','Inactive','Not checked'])}{field('Project work / milestone','projectWork','textarea',null,true)}{field('Project status','projectStatus','text',['Not started','Planning','In progress','Testing','Completed','Blocked'])}{['productivity','understanding','independence','participation'].map(k=>field(`${k[0].toUpperCase()+k.slice(1)} (1-5)`,k,'number'))}{field('Blocker / challenge','blocker','textarea')}{field('Mentor intervention / support','intervention','textarea')}{field('Evidence checked','evidenceChecked','textarea')}{field('Evidence link','evidenceLink')}{field('Next action / deadline','nextAction','textarea',null,true)}{field('Escalation required','escalationRequired','checkbox')}{field('Mentor notes','notes','textarea',null,true)}</>}{kind==='assessments'&&<>{field('Assessment date','date','date')}{field('Project title','projectTitle')}{field('Development mode','developmentMode','text',['Developed from scratch','Vibe coded','Coded along with AI'])}{field('AI / vibe-coded contribution','aiContribution','text',['0%','25%','50%','75%','90%'])}{ratingFields.map(([k,l])=>field(`${l} (1-5)`,k,'number'))}{field('Evidence reviewed','evidenceReviewed','textarea',null,true)}{field('Assessment remarks','remarks','textarea',null,true)}{field('Improvement plan','improvementPlan','textarea',null,true)}</>}{kind==='weekly'&&<>{field('Week starting','weekStarting','date')}{field('Week ending','weekEnding','date')}{field('Attendance summary','attendanceSummary','textarea',null,true)}{field('Learning / LMS progress','learningProgress','textarea',null,true)}{field('Project milestones achieved','milestones','textarea',null,true)}{field('Project status','projectStatus')}{field('Assessment / demonstration outcome','assessmentOutcome','textarea',null,true)}{field('Strengths','strengths','textarea')}{field('Gaps / reasons for delay','gaps','textarea')}{field('Support / intervention provided','interventions','textarea',null,true)}{field('Management intervention required','managementIntervention','checkbox')}{field('Next week actions','nextWeekActions','textarea',null,true)}{field('Evidence links','evidenceLinks','textarea',null,true)}{field('Mentor weekly summary','summary','textarea',null,true)}</>}{kind==='actions'&&<>{field('Date raised','dateRaised','date')}{field('Issue / performance gap','issue','textarea',null,true)}{field('Priority','priority','text',['Low','Medium','High','Urgent'])}{field('Action required','actionRequired','textarea',null,true)}{field('Owner','owner')}{field('Due date','dueDate','date')}{field('Status','status','text',['Open','In progress','Awaiting response','Closed','Escalated'])}{field('Outcome / evidence','outcomeEvidence','textarea',null,true)}{field('Escalated to','escalatedTo')}{field('Follow-up notes','followUpNotes','textarea',null,true)}</>}{err&&<div className="error-box span-2">{err}</div>}<div className="form-actions span-2"><button type="button" className="secondary" onClick={onClose}>Cancel</button><button className="primary" disabled={busy}>{busy?'Saving…':'Save record'}</button></div></form></Modal>}
-function AmbientBackground(){
+function AmbientBackground({theme}){
  const canvasRef=React.useRef(null);
  useEffect(()=>{
   const canvas=canvasRef.current,context=canvas?.getContext('2d');
   if(!canvas||!context)return;
-  let width=0,height=0,frame=0,particles=[],streams=[];
-  const pointer={x:-1000,y:-1000};
+  let width=0,height=0,frame=0,lastTime=0,lastDraw=0,baseCanvas,baseContext,nodes=[],edges=[],lights=[];
   const motion=window.matchMedia('(prefers-reduced-motion: reduce)');
-  const glyphs=['01','{ }','< />','=>','0x','[ ]','//'];
+  const dark=theme==='dark',radius=72,stepX=radius*1.5,stepY=Math.sqrt(3)*radius;
+  const palette=[184,171,258,322],trailDuration=1.8,frameInterval=1000/30;
+  function makeLight(delay,hue){
+   const candidates=nodes.map((node,index)=>node.neighbors.length?index:-1).filter(index=>index>=0);
+   const from=candidates[Math.floor(Math.random()*candidates.length)];
+   const next=nodes[from].neighbors[Math.floor(Math.random()*nodes[from].neighbors.length)];
+   return{from,to:next.node,edge:next.edge,progress:0,speed:.22+Math.random()*.06,wait:delay,hue,trail:[]};
+  }
+  function buildGrid(){
+   nodes=[];edges=[];
+   const nodeIds=new Map(),edgeIds=new Map();
+   const getNode=(x,y)=>{
+    const key=`${Math.round(x*10)},${Math.round(y*10)}`;
+    if(nodeIds.has(key))return nodeIds.get(key);
+    const id=nodes.length;
+    nodeIds.set(key,id);nodes.push({x,y,neighbors:[]});
+    return id;
+   };
+   const cols=Math.ceil(width/stepX)+2,rows=Math.ceil(height/stepY)+2;
+   for(let col=-1;col<cols;col++){
+    for(let row=-1;row<rows;row++){
+     const cx=col*stepX-radius,cy=row*stepY+((col%2+2)%2)*stepY/2-radius;
+     for(let side=0;side<6;side++){
+      const a=Math.PI/3*side,b=Math.PI/3*(side+1);
+      const from=getNode(cx+radius*Math.cos(a),cy+radius*Math.sin(a));
+      const to=getNode(cx+radius*Math.cos(b),cy+radius*Math.sin(b));
+      const key=from<to?`${from}:${to}`:`${to}:${from}`;
+      if(edgeIds.has(key))continue;
+      const edge=edges.length;
+      edgeIds.set(key,edge);edges.push({from,to});
+      nodes[from].neighbors.push({node:to,edge});
+      nodes[to].neighbors.push({node:from,edge});
+     }
+    }
+   }
+   lights=[
+    makeLight(Math.random()*.8,palette[Math.floor(Math.random()*palette.length)]),
+    makeLight(2.4+Math.random()*1.8,palette[Math.floor(Math.random()*palette.length)])
+   ];
+  }
+  function drawGrid(){
+   baseCanvas.width=canvas.width;baseCanvas.height=canvas.height;
+   baseContext.setTransform(canvas.width/width,0,0,canvas.height/height,0,0);
+   baseContext.clearRect(0,0,width,height);
+   baseContext.beginPath();
+   for(const edge of edges){
+    const from=nodes[edge.from],to=nodes[edge.to];
+    baseContext.moveTo(from.x,from.y);baseContext.lineTo(to.x,to.y);
+   }
+   baseContext.strokeStyle=dark?'rgba(147,165,197,.16)':'rgba(72,94,129,.13)';
+   baseContext.lineWidth=1.1;baseContext.stroke();
+  }
+  function renderStatic(){
+   context.clearRect(0,0,width,height);
+   if(baseCanvas)context.drawImage(baseCanvas,0,0,width,height);
+  }
   function resize(){
-   const ratio=Math.min(window.devicePixelRatio||1,2);
+   const ratio=Math.min(window.devicePixelRatio||1,1.25);
    width=window.innerWidth;height=window.innerHeight;
    canvas.width=width*ratio;canvas.height=height*ratio;
    context.setTransform(ratio,0,0,ratio,0,0);
-   particles=Array.from({length:Math.min(42,Math.max(20,Math.floor(width*height/30000)))},()=>({x:Math.random()*width,y:Math.random()*height,vx:(Math.random()-.5)*.32,vy:(Math.random()-.5)*.32,radius:1+Math.random()*1.5}));
-   streams=Array.from({length:Math.min(22,Math.max(10,Math.floor(width/82)))},()=>({x:Math.random()*width,y:Math.random()*height,speed:.18+Math.random()*.42,opacity:.07+Math.random()*.08,glyph:glyphs[Math.floor(Math.random()*glyphs.length)]}));
-   if(motion.matches)draw();else if(!frame)frame=requestAnimationFrame(draw);
+   if(!baseCanvas){baseCanvas=document.createElement('canvas');baseContext=baseCanvas.getContext('2d')}
+   buildGrid();drawGrid();lastTime=0;lastDraw=0;
+   if(motion.matches||document.hidden)renderStatic();
+   else if(!frame)frame=requestAnimationFrame(draw);
   }
-  function draw(){
-   context.clearRect(0,0,width,height);
-   if(pointer.x>=0){
-    const glow=context.createRadialGradient(pointer.x,pointer.y,0,pointer.x,pointer.y,260);
-    glow.addColorStop(0,'rgba(39,129,160,.15)');glow.addColorStop(1,'rgba(39,129,160,0)');
-    context.fillStyle=glow;context.fillRect(0,0,width,height);
+  function drawEdge(edgeId,alpha,hue,widthValue,blur){
+   const edge=edges[edgeId],a=nodes[edge.from],b=nodes[edge.to];
+   context.beginPath();context.moveTo(a.x,a.y);context.lineTo(b.x,b.y);
+   context.strokeStyle=`hsla(${hue},55%,${dark?68:48}%,${alpha})`;
+   context.lineWidth=widthValue;context.shadowColor=`hsla(${hue},65%,60%,${alpha})`;context.shadowBlur=blur;context.stroke();context.shadowBlur=0;
+  }
+  function advanceLight(light,delta){
+   for(let index=light.trail.length-1;index>=0;index--){
+    const trail=light.trail[index];trail.age+=delta;
+    if(trail.age>=trailDuration)light.trail.splice(index,1);
    }
-   const scanY=motion.matches?height*.52:(performance.now()/38)%(height+120)-60;
-   const scan=context.createLinearGradient(0,scanY-26,0,scanY+26);
-   scan.addColorStop(0,'rgba(25,126,150,0)');scan.addColorStop(.5,'rgba(25,126,150,.07)');scan.addColorStop(1,'rgba(25,126,150,0)');
-   context.fillStyle=scan;context.fillRect(0,scanY-26,width,52);
-   for(const stream of streams){
-    if(!motion.matches){stream.y+=stream.speed;if(stream.y>height+28){stream.y=-24;stream.x=Math.random()*width;stream.glyph=glyphs[Math.floor(Math.random()*glyphs.length)]}}
-    context.font='600 11px monospace';context.fillStyle=`rgba(28,103,135,${stream.opacity})`;
-    context.fillText(stream.glyph,stream.x,stream.y);
-    context.fillRect(stream.x-3,stream.y-15,1,18);
-   }
-   for(let i=0;i<particles.length;i++){
-    const particle=particles[i];
-    if(!motion.matches){particle.x+=particle.vx;particle.y+=particle.vy;if(particle.x<0||particle.x>width)particle.vx*=-1;if(particle.y<0||particle.y>height)particle.vy*=-1}
-    const dx=particle.x-pointer.x,dy=particle.y-pointer.y,distance=Math.hypot(dx,dy);
-    if(distance<150&&distance>0){particle.x+=dx/distance*.16;particle.y+=dy/distance*.16}
-    context.beginPath();context.arc(particle.x,particle.y,particle.radius,0,Math.PI*2);
-    context.fillStyle='rgba(36,105,143,.35)';context.fill();
-    if(i%6===0){context.beginPath();context.arc(particle.x,particle.y,particle.radius+4,0,Math.PI*2);context.strokeStyle='rgba(47,129,157,.18)';context.stroke()}
-    for(let j=i+1;j<particles.length;j++){
-     const neighbor=particles[j],gap=Math.hypot(particle.x-neighbor.x,particle.y-neighbor.y);
-     if(gap<115){context.beginPath();context.moveTo(particle.x,particle.y);context.lineTo(neighbor.x,neighbor.y);context.strokeStyle=`rgba(54,125,158,${(1-gap/115)*.18})`;context.lineWidth=1;context.stroke()}
+   if(light.wait>0){light.wait=Math.max(0,light.wait-delta);return}
+   light.progress+=delta*light.speed;
+   if(light.progress<1)return;
+   light.trail.unshift({edge:light.edge,age:0});
+   light.trail.length=Math.min(light.trail.length,1);
+   const previous=light.from,current=light.to;
+   const options=nodes[current].neighbors.filter(neighbor=>neighbor.node!==previous);
+   const choices=options.length?options:nodes[current].neighbors;
+   const next=choices[Math.floor(Math.random()*choices.length)];
+   light.from=current;light.to=next.node;light.edge=next.edge;
+   light.progress-=1;light.wait=.18+Math.random()*.5;
+  }
+  function draw(timestamp){
+   frame=0;
+   if(document.hidden)return;
+   if(timestamp-lastDraw<frameInterval-1){frame=requestAnimationFrame(draw);return}
+   const delta=lastTime?Math.min((timestamp-lastTime)/1000,.05):0;
+   lastTime=timestamp;lastDraw=timestamp;
+   context.clearRect(0,0,width,height);context.drawImage(baseCanvas,0,0,width,height);
+   for(const light of lights){
+    advanceLight(light,delta);
+    for(const trail of light.trail){
+     const opacity=(1-trail.age/trailDuration)*.22;
+     drawEdge(trail.edge,opacity,light.hue,1.8,4);
     }
+    const from=nodes[light.from],to=nodes[light.to],progress=light.progress;
+    const headX=from.x+(to.x-from.x)*progress,headY=from.y+(to.y-from.y)*progress;
+    const tail=Math.min(.16,progress),tailX=from.x+(to.x-from.x)*(progress-tail),tailY=from.y+(to.y-from.y)*(progress-tail);
+    context.beginPath();context.moveTo(tailX,tailY);context.lineTo(headX,headY);
+    context.strokeStyle=`hsla(${light.hue},55%,${dark?70:48}%,.42)`;context.lineWidth=2;context.shadowColor=`hsla(${light.hue},65%,60%,.6)`;context.shadowBlur=5;context.stroke();context.shadowBlur=0;
+    context.beginPath();context.arc(headX,headY,2.1,0,Math.PI*2);
+    context.fillStyle=`hsla(${light.hue},65%,${dark?76:54}%,.8)`;context.shadowColor=`hsla(${light.hue},70%,65%,.65)`;context.shadowBlur=6;context.fill();context.shadowBlur=0;
    }
-   if(!motion.matches)frame=requestAnimationFrame(draw);
+   frame=requestAnimationFrame(draw);
   }
-  function move(event){pointer.x=event.clientX;pointer.y=event.clientY;if(motion.matches)draw()}
-  function leave(){pointer.x=-1000;pointer.y=-1000;if(motion.matches)draw()}
-  function motionChange(){cancelAnimationFrame(frame);if(!motion.matches)draw();else draw()}
-  window.addEventListener('resize',resize);
-  window.addEventListener('pointermove',move,{passive:true});
-  window.addEventListener('pointerleave',leave);
+  function visibilityChange(){
+   if(document.hidden){cancelAnimationFrame(frame);frame=0;lastTime=0;return}
+   if(motion.matches)renderStatic();else if(!frame)frame=requestAnimationFrame(draw);
+  }
+  function motionChange(){
+   cancelAnimationFrame(frame);frame=0;lastTime=0;
+   if(motion.matches)renderStatic();else if(!document.hidden)frame=requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize',resize,{passive:true});
+  document.addEventListener('visibilitychange',visibilityChange);
   motion.addEventListener('change',motionChange);
   resize();
-  return()=>{cancelAnimationFrame(frame);window.removeEventListener('resize',resize);window.removeEventListener('pointermove',move);window.removeEventListener('pointerleave',leave);motion.removeEventListener('change',motionChange)};
- },[]);
+  return()=>{cancelAnimationFrame(frame);window.removeEventListener('resize',resize);document.removeEventListener('visibilitychange',visibilityChange);motion.removeEventListener('change',motionChange)};
+ },[theme]);
  return <div className="ambient-background" aria-hidden="true"><canvas ref={canvasRef}/></div>
 }
 function ProfilePage(){
@@ -339,5 +413,10 @@ function AdminMentorProgress(){
  </>
 }
 
-function App(){return <><AmbientBackground/><Routes><Route path="/login" element={<Login/>}/><Route path="/*" element={<Protected><Shell><Routes><Route path="/" element={<Dashboard/>}/><Route path="/fellows" element={<Fellows/>}/><Route path="/daily" element={<RecordPage kind="daily"/>}/><Route path="/projects" element={<RecordPage kind="projects"/>}/><Route path="/assessments" element={<RecordPage kind="assessments"/>}/><Route path="/weekly" element={<RecordPage kind="weekly"/>}/><Route path="/actions" element={<RecordPage kind="actions"/>}/><Route path="/profile" element={<ProfilePage/>}/><Route path="/admin/users" element={<AdminOnly><AdminUsers/></AdminOnly>}/><Route path="/admin/mentor-progress" element={<AdminOnly><AdminMentorProgress/></AdminOnly>}/><Route path="*" element={<Navigate to="/"/>}/></Routes></Shell></Protected>}/></Routes></>}
+function App(){
+ const[theme,setTheme]=useState(()=>localStorage.getItem('l2e_theme')==='dark'?'dark':'light');
+ useEffect(()=>{localStorage.setItem('l2e_theme',theme)},[theme]);
+ const toggleTheme=()=>setTheme(current=>current==='dark'?'light':'dark');
+ return <div className={`app-root theme-${theme}`}><AmbientBackground theme={theme}/><Routes><Route path="/login" element={<Login/>}/><Route path="/*" element={<Protected><Shell theme={theme} onToggleTheme={toggleTheme}><Routes><Route path="/" element={<Dashboard/>}/><Route path="/fellows" element={<Fellows/>}/><Route path="/daily" element={<RecordPage kind="daily"/>}/><Route path="/projects" element={<RecordPage kind="projects"/>}/><Route path="/assessments" element={<RecordPage kind="assessments"/>}/><Route path="/weekly" element={<RecordPage kind="weekly"/>}/><Route path="/actions" element={<RecordPage kind="actions"/>}/><Route path="/profile" element={<ProfilePage/>}/><Route path="/admin/users" element={<AdminOnly><AdminUsers/></AdminOnly>}/><Route path="/admin/mentor-progress" element={<AdminOnly><AdminMentorProgress/></AdminOnly>}/><Route path="*" element={<Navigate to="/"/>}/></Routes></Shell></Protected>}/></Routes></div>
+}
 export default App;
