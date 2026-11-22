@@ -231,10 +231,10 @@ function AmbientBackground({theme}){
      }
     }
    }
-   lights=[
-    makeLight(Math.random()*.8,palette[Math.floor(Math.random()*palette.length)]),
-    makeLight(2.4+Math.random()*1.8,palette[Math.floor(Math.random()*palette.length)])
-   ];
+   lights=Array.from({length:80},()=>makeLight(
+    Math.random()*5.4,
+    palette[Math.floor(Math.random()*palette.length)]
+   ));
   }
   function drawGrid(){
    baseCanvas.width=canvas.width;baseCanvas.height=canvas.height;
