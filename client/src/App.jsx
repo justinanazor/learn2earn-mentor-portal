@@ -198,11 +198,26 @@ function AmbientBackground({theme}){
   const motion=window.matchMedia('(prefers-reduced-motion: reduce)');
   const dark=theme==='dark',radius=72,stepX=radius*1.5,stepY=Math.sqrt(3)*radius;
   const palette=[184,171,258,322],trailDuration=1.8,frameInterval=100/30;
-  function makeLight(delay,hue){
-   const candidates=nodes.map((node,index)=>node.neighbors.length?index:-1).filter(index=>index>=0);
-   const from=candidates[Math.floor(Math.random()*candidates.length)];
-   const next=nodes[from].neighbors[Math.floor(Math.random()*nodes[from].neighbors.length)];
-   return{from,to:next.node,edge:next.edge,progress:0,speed:.22+Math.random()*.06,wait:delay,hue,trail:[]};
+  function makeLight(delay,hue,occupiedEdges,occupiedNodes){
+   const available=edges.map((edge,index)=>({edge,index}))
+    .filter(({edge,index})=>!occupiedEdges.has(index)
+     &&!occupiedNodes.has(edge.from)&&!occupiedNodes.has(edge.to));
+   if(!available.length)return null;
+   const chosen=available[Math.floor(Math.random()*available.length)];
+   const reverse=Math.random()<.5;
+   occupiedEdges.add(chosen.index);
+   occupiedNodes.add(chosen.edge.from);
+   occupiedNodes.add(chosen.edge.to);
+   return{
+    from:reverse?chosen.edge.to:chosen.edge.from,
+    to:reverse?chosen.edge.from:chosen.edge.to,
+    edge:chosen.index,
+    progress:0,
+    speed:.22+Math.random()*.06,
+    wait:delay,
+    hue,
+    trail:[]
+   };
   }
   function buildGrid(){
    nodes=[];edges=[];
@@ -231,10 +246,11 @@ function AmbientBackground({theme}){
      }
     }
    }
-   lights=Array.from({length:80},()=>makeLight(
-    Math.random()*5.4,
-    palette[Math.floor(Math.random()*palette.length)]
-   ));
+   const occupiedEdges=new Set(),occupiedNodes=new Set();
+   lights=Array.from({length:80},()=>{
+    const hue=palette[Math.floor(Math.random()*palette.length)];
+    return makeLight(Math.random()*5.4,hue,occupiedEdges,occupiedNodes);
+   }).filter(Boolean);
   }
   function drawGrid(){
    baseCanvas.width=canvas.width;baseCanvas.height=canvas.height;
@@ -268,7 +284,7 @@ function AmbientBackground({theme}){
    context.strokeStyle=`hsla(${hue},55%,${dark?68:48}%,${alpha})`;
    context.lineWidth=widthValue;context.shadowColor=`hsla(${hue},65%,60%,${alpha})`;context.shadowBlur=blur;context.stroke();context.shadowBlur=0;
   }
-  function advanceLight(light,delta){
+  function advanceLight(light,delta,occupiedEdges,occupiedNodes){
    for(let index=light.trail.length-1;index>=0;index--){
     const trail=light.trail[index];trail.age+=delta;
     if(trail.age>=trailDuration)light.trail.splice(index,1);
@@ -279,10 +295,35 @@ function AmbientBackground({theme}){
    light.trail.unshift({edge:light.edge,age:0});
    light.trail.length=Math.min(light.trail.length,1);
    const previous=light.from,current=light.to;
-   const options=nodes[current].neighbors.filter(neighbor=>neighbor.node!==previous);
-   const choices=options.length?options:nodes[current].neighbors;
+   occupiedEdges.delete(light.edge);
+   occupiedNodes.clear();
+   for(const edgeId of occupiedEdges){
+     occupiedNodes.add(edges[edgeId].from);
+     occupiedNodes.add(edges[edgeId].to);
+   }
+   const options=nodes[current].neighbors.filter(neighbor=>neighbor.node!==previous
+    &&!occupiedEdges.has(neighbor.edge)&&!occupiedNodes.has(neighbor.node));
+   const choices=options.length?options:nodes[current].neighbors.filter(neighbor=>neighbor.node!==previous
+    &&!occupiedEdges.has(neighbor.edge)&&!occupiedNodes.has(neighbor.node));
+   if(!choices.length){
+    occupiedEdges.add(light.edge);
+    occupiedNodes.clear();
+    for(const edgeId of occupiedEdges){
+     occupiedNodes.add(edges[edgeId].from);
+     occupiedNodes.add(edges[edgeId].to);
+    }
+    light.progress=.99;
+    light.wait=.18+Math.random()*.5;
+    return;
+   }
    const next=choices[Math.floor(Math.random()*choices.length)];
    light.from=current;light.to=next.node;light.edge=next.edge;
+   occupiedEdges.add(light.edge);
+   occupiedNodes.clear();
+   for(const edgeId of occupiedEdges){
+    occupiedNodes.add(edges[edgeId].from);
+    occupiedNodes.add(edges[edgeId].to);
+   }
    light.progress-=1;light.wait=.18+Math.random()*.5;
   }
   function draw(timestamp){
@@ -292,8 +333,14 @@ function AmbientBackground({theme}){
    const delta=lastTime?Math.min((timestamp-lastTime)/100,.05):0;
    lastTime=timestamp;lastDraw=timestamp;
    context.clearRect(0,0,width,height);context.drawImage(baseCanvas,0,0,width,height);
+   const occupiedEdges=new Set(),occupiedNodes=new Set();
    for(const light of lights){
-    advanceLight(light,delta);
+    occupiedEdges.add(light.edge);
+    occupiedNodes.add(edges[light.edge].from);
+    occupiedNodes.add(edges[light.edge].to);
+   }
+   for(const light of lights){
+    advanceLight(light,delta,occupiedEdges,occupiedNodes);
     for(const trail of light.trail){
      const opacity=(1-trail.age/trailDuration)*.22;
      drawEdge(trail.edge,opacity,light.hue,1.8,4);
