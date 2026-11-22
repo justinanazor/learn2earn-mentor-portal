@@ -6,6 +6,8 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['admin', 'mentor'], default: 'mentor' },
   groups: { type: [String], enum: ['Group A', 'Group B'], default: [] },
   active: { type: Boolean, default: true },
-  sessionVersion: { type: Number, default: 0 }
+  sessionVersion: { type: Number, default: 0 },
+  passwordResetTokenHash: { type: String, default: null },
+  passwordResetExpires: { type: Date, default: null }
 }, { timestamps: true });
 export default mongoose.model('User', userSchema);

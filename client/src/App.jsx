@@ -1,4 +1,4 @@
-import React,{useEffect,useState}from'react';import{Routes,Route,Navigate,NavLink,useNavigate,useLocation}from'react-router-dom';
+import React,{useEffect,useState}from'react';import{Routes,Route,Navigate,NavLink,useNavigate,useLocation,useSearchParams}from'react-router-dom';
 import{LayoutDashboard,Users,ClipboardList,FolderKanban,CalendarDays,AlertTriangle,LogOut,Menu,X,Search,Plus,Download,Upload,RefreshCw,CheckCircle2,Clock3,BookOpen,Target,ChevronRight,Filter,FileText,ShieldCheck,BarChart3,Sun,Moon}from'lucide-react';
 import api from'./lib/api';
 const user=()=>{try{return JSON.parse(localStorage.getItem('l2e_user')||'null')}catch{return null}};
@@ -12,6 +12,7 @@ function Login(){
  const[welcomeName,setWelcomeName]=useState('');
  const[leaving,setLeaving]=useState(false);
  const nav=useNavigate();
+ const location=useLocation();
  async function submit(event){
   event.preventDefault();
   setBusy(true);
@@ -36,12 +37,14 @@ function Login(){
    <p className="eyebrow">LEARN2EARN · ABUJA CAMPUS</p>
    <h1>Mentor Portal</h1>
    <p className="muted">Sign in to manage fellow progress, assessments and reporting.</p>
+   {location.state?.passwordReset&&<div className="success-box">Your password has been reset. Sign in with your new password.</div>}
    <form onSubmit={submit}>
     <label>Email address<input type="email" required value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></label>
     <label>Password<input type="password" required value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></label>
     {error&&<div className="error-box">{error}</div>}
     <button className="primary full" disabled={busy}>{busy?'Signing in…':'Sign in'}</button>
    </form>
+   <NavLink className="text-link login-forgot" to="/forgot-password">Forgot password?</NavLink>
    <p className="login-hint">Ask your administrator for your sign-in credentials.</p>
   </div>
   {welcomeName&&<div className={`login-transition${leaving?' login-transition-leaving':''}`} role="status" aria-live="polite">
@@ -52,6 +55,72 @@ function Login(){
    </div>
   </div>}
  </div>
+}
+function ForgotPassword(){
+ const[email,setEmail]=useState('');
+ const[busy,setBusy]=useState(false);
+ const[error,setError]=useState('');
+ const[sent,setSent]=useState(false);
+ async function submit(event){
+  event.preventDefault();
+  setBusy(true);
+  setError('');
+  try{
+   await api.post('/auth/forgot-password',{email});
+   setSent(true);
+   setEmail('');
+  }catch(err){
+   setError(err.response?.data?.message||'Unable to request a password reset right now.');
+  }finally{setBusy(false)}
+ }
+ return <div className="login-shell"><div className="login-card">
+  <div className="brand-mark">L2E</div>
+  <p className="eyebrow">LEARN2EARN · ABUJA CAMPUS</p>
+  <h1>Forgot password?</h1>
+  <p className="muted">Enter the email address linked to your account and we’ll send a reset link if it’s registered.</p>
+  {sent?<div className="success-box">If an active account exists for that email, a password reset link has been sent.</div>:<form onSubmit={submit}>
+   <label>Email address<input type="email" required maxLength="254" autoComplete="email" value={email} onChange={event=>setEmail(event.target.value)}/></label>
+   {error&&<div className="error-box">{error}</div>}
+   <button className="primary full" disabled={busy}>{busy?'Sending…':'✈️ Send Password Reset Link'}</button>
+  </form>}
+  <NavLink className="text-link login-forgot" to="/login">Back to sign in</NavLink>
+ </div></div>
+}
+function ResetPassword(){
+ const[tokenParams]=useSearchParams();
+ const token=tokenParams.get('token')||'';
+ const[password,setPassword]=useState('');
+ const[confirmPassword,setConfirmPassword]=useState('');
+ const[busy,setBusy]=useState(false);
+ const[error,setError]=useState('');
+ const nav=useNavigate();
+ async function submit(event){
+  event.preventDefault();
+  setError('');
+  if(password!==confirmPassword){setError('Passwords do not match.');return}
+  setBusy(true);
+  try{
+   await api.post('/auth/reset-password',{token,password,confirmPassword});
+   localStorage.removeItem('l2e_token');
+   localStorage.removeItem('l2e_user');
+   nav('/login',{replace:true,state:{passwordReset:true}});
+  }catch(err){
+   setError(err.response?.data?.message||'Unable to reset your password. Request a new reset link.');
+  }finally{setBusy(false)}
+ }
+ return <div className="login-shell"><div className="login-card">
+  <div className="brand-mark">L2E</div>
+  <p className="eyebrow">LEARN2EARN · ABUJA CAMPUS</p>
+  <h1>Set a new password</h1>
+  <p className="muted">Choose a new password with at least 12 characters. Passwords can be up to 72 bytes.</p>
+  {!token?<><div className="error-box">This password reset link is invalid or has expired.</div><NavLink className="text-link login-forgot" to="/forgot-password">Request another reset link</NavLink></>:<form onSubmit={submit}>
+   <label>Enter New Password<input type="password" required minLength="12" maxLength="72" autoComplete="new-password" value={password} onChange={event=>setPassword(event.target.value)}/></label>
+   <label>Confirm New Password<input type="password" required minLength="12" maxLength="72" autoComplete="new-password" value={confirmPassword} onChange={event=>setConfirmPassword(event.target.value)}/></label>
+   {error&&<div className="error-box">{error}</div>}
+   <button className="primary full" disabled={busy}>{busy?'Updating password…':'Reset Password'}</button>
+  </form>}
+  {token&&<NavLink className="text-link login-forgot" to="/login">Back to sign in</NavLink>}
+ </div></div>
 }
 const logoUrl='https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbd071_22NcEVqZ00Vk48O1R2abn2Vb4XK3nhBWn_mEqC2r_dj_IpRIyeo&s=10';
 const navItems=[['/','Overview',LayoutDashboard],['/fellows','Fellow register',Users],['/daily','Daily monitoring',ClipboardList],['/projects','Project tracking',FolderKanban],['/assessments','Assessments',Target],['/weekly','Weekly reviews',CalendarDays],['/actions','Action register',AlertTriangle],['/admin/mentor-progress','Mentor progress',BarChart3,'admin'],['/admin/users','User management',ShieldCheck,'admin']];
@@ -421,6 +490,6 @@ function App(){
  const[theme,setTheme]=useState(()=>localStorage.getItem('l2e_theme')==='dark'?'dark':'light');
  useEffect(()=>{localStorage.setItem('l2e_theme',theme)},[theme]);
  const toggleTheme=()=>setTheme(current=>current==='dark'?'light':'dark');
- return <div className={`app-root theme-${theme}`}><AmbientBackground theme={theme}/><Routes><Route path="/login" element={<Login/>}/><Route path="/*" element={<Protected><Shell theme={theme} onToggleTheme={toggleTheme}><Routes><Route path="/" element={<Dashboard/>}/><Route path="/fellows" element={<Fellows/>}/><Route path="/daily" element={<RecordPage kind="daily"/>}/><Route path="/projects" element={<RecordPage kind="projects"/>}/><Route path="/assessments" element={<RecordPage kind="assessments"/>}/><Route path="/weekly" element={<RecordPage kind="weekly"/>}/><Route path="/actions" element={<RecordPage kind="actions"/>}/><Route path="/profile" element={<ProfilePage/>}/><Route path="/admin/users" element={<AdminOnly><AdminUsers/></AdminOnly>}/><Route path="/admin/mentor-progress" element={<AdminOnly><AdminMentorProgress/></AdminOnly>}/><Route path="*" element={<Navigate to="/"/>}/></Routes></Shell></Protected>}/></Routes></div>
+ return <div className={`app-root theme-${theme}`}><AmbientBackground theme={theme}/><Routes><Route path="/login" element={<Login/>}/><Route path="/forgot-password" element={<ForgotPassword/>}/><Route path="/reset-password" element={<ResetPassword/>}/><Route path="/*" element={<Protected><Shell theme={theme} onToggleTheme={toggleTheme}><Routes><Route path="/" element={<Dashboard/>}/><Route path="/fellows" element={<Fellows/>}/><Route path="/daily" element={<RecordPage kind="daily"/>}/><Route path="/projects" element={<RecordPage kind="projects"/>}/><Route path="/assessments" element={<RecordPage kind="assessments"/>}/><Route path="/weekly" element={<RecordPage kind="weekly"/>}/><Route path="/actions" element={<RecordPage kind="actions"/>}/><Route path="/profile" element={<ProfilePage/>}/><Route path="/admin/users" element={<AdminOnly><AdminUsers/></AdminOnly>}/><Route path="/admin/mentor-progress" element={<AdminOnly><AdminMentorProgress/></AdminOnly>}/><Route path="*" element={<Navigate to="/"/>}/></Routes></Shell></Protected>}/></Routes></div>
 }
 export default App;

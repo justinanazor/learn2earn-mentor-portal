@@ -78,6 +78,7 @@ router.patch('/users/:id', async (req,res) => {
   }
 
   const shouldRenameMentor = user.role === 'mentor' && nextRole === 'mentor' && user.name !== nextName;
+  const credentialsChanged = (typeof body.password === 'string' && body.password) || user.email !== nextEmail || user.active !== nextActive;
   if (shouldRenameMentor) await renameMentorReferences(user.name,nextName);
   user.name = nextName;
   user.email = nextEmail;
@@ -87,6 +88,10 @@ router.patch('/users/:id', async (req,res) => {
   if (typeof body.password === 'string' && body.password) {
     user.password = await bcrypt.hash(body.password,12);
     user.sessionVersion += 1;
+  }
+  if (credentialsChanged) {
+    user.passwordResetTokenHash = null;
+    user.passwordResetExpires = null;
   }
   await user.save();
   res.json(publicUser(user));

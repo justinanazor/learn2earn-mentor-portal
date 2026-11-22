@@ -28,7 +28,9 @@ cd server
 cp .env.example .env
 ```
 
-Edit `server/.env` and set `MONGODB_URI`, a random `JWT_SECRET` of at least 32 characters, and a unique `ADMIN_PASSWORD` of at least 12 characters. These values are required; do not commit `.env`.
+Edit `server/.env` and set `MONGODB_URI`, a random `JWT_SECRET` of at least 32 characters, a unique `ADMIN_PASSWORD` of at least 12 characters, and the SMTP settings used to deliver password-reset emails. These values are required for their corresponding features; do not commit `.env`.
+
+Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, and optionally `SMTP_FROM` with your email provider's SMTP settings. Password-reset emails link to the first URL in `CLIENT_URL`. Reset links are single-use and expire after 30 minutes. Make sure each account, especially the administrator, has a real, reachable email address; the example `admin@learn2earn.local` address cannot receive external email. SMTP credentials must be kept in the untracked `server/.env` file or deployment secrets.
 
 ### 2. Install dependencies and seed the database
 
@@ -64,6 +66,7 @@ Open `http://localhost:5173`.
 
 - **Dashboard:** group-aware roster size, mentor allocation, standing counts, inactive LMS count, blocked projects, open actions and recent assessments.
 - **My profile:** update your name and email, and change your password after verifying the current password.
+- **Forgot password:** request a time-limited password-reset link by email and set a new password. Requires the backend SMTP settings above.
 - **User management (administrators):** create mentor or administrator accounts, assign mentor groups, edit roles, deactivate/reactivate accounts, delete accounts with assignment safeguards, and reset credentials. New and reset passwords must be at least 12 characters.
 - **Mentor progress (administrators):** compare each mentor’s active roster, fellow standing, project outcomes, reporting activity, assessment scores and open actions.
 - **Fellow Register:** administrators can create fellows individually or import a CSV with `Fellow name` and `Assigned mentor` columns; other fellow fields and the `Group` column are optional. Users can edit, archive, search, filter, assign mentors within a group and export CSV. Group selection is restricted to the signed-in mentor's assigned groups.
@@ -86,6 +89,8 @@ Mentor accounts store their assigned groups. Fellow mentor assignments use the n
 ## API overview
 
 - `POST /api/auth/login`
+- `POST /api/auth/forgot-password`
+- `POST /api/auth/reset-password`
 - `GET|PATCH /api/auth/me`
 - `GET /api/auth/mentors`
 - `GET /api/dashboard`
