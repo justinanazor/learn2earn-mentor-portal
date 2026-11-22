@@ -57,10 +57,19 @@ const logoUrl='https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbd071_22Nc
 const navItems=[['/','Overview',LayoutDashboard],['/fellows','Fellow register',Users],['/daily','Daily monitoring',ClipboardList],['/projects','Project tracking',FolderKanban],['/assessments','Assessments',Target],['/weekly','Weekly reviews',CalendarDays],['/actions','Action register',AlertTriangle],['/admin/mentor-progress','Mentor progress',BarChart3,'admin'],['/admin/users','User management',ShieldCheck,'admin']];
 function Shell({children,theme,onToggleTheme}){
  const[u,setU]=useState(user()),[open,setOpen]=useState(false),loc=useLocation(),nav=useNavigate();
+ const[signingOut,setSigningOut]=useState(false),[signOutLeaving,setSignOutLeaving]=useState(false);
  useEffect(()=>setOpen(false),[loc.pathname]);
  useEffect(()=>{const update=()=>setU(user());window.addEventListener('l2e-profile-updated',update);return()=>window.removeEventListener('l2e-profile-updated',update)},[]);
  useEffect(()=>{let mounted=true;api.get('/auth/me').then(({data})=>{if(!mounted)return;localStorage.setItem('l2e_user',JSON.stringify(data));setU(data)}).catch(error=>{if(error.response?.status!==401)console.error('Unable to refresh account details',error)});return()=>{mounted=false}},[]);
- function logout(){localStorage.clear();nav('/login')}
+ async function logout(){
+  if(signingOut)return;
+  setSigningOut(true);
+  await new Promise(resolve=>setTimeout(resolve,1400));
+  setSignOutLeaving(true);
+  await new Promise(resolve=>setTimeout(resolve,280));
+  localStorage.clear();
+  nav('/login');
+ }
  return (
   <div className="app-shell">
    <aside className={`sidebar ${open?'show':''}`}>
@@ -85,6 +94,13 @@ function Shell({children,theme,onToggleTheme}){
     <div className="page-content">{children}</div>
     <footer>Learn2Earn Mentor Portal <span>·</span> Evidence-led mentorship and accountability</footer>
    </main>
+    {signingOut&&<div className={`login-transition${signOutLeaving?' login-transition-leaving':''}`} role="status" aria-live="polite">
+     <div className="login-transition-content">
+      <span className="login-spinner" aria-hidden="true"/>
+      <p>Signing you out, {u?.name||'your account'}</p>
+      <small>Securing your session…</small>
+     </div>
+    </div>}
   </div>
  )
 }
