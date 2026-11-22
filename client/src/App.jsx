@@ -194,182 +194,76 @@ function AmbientBackground({theme}){
  useEffect(()=>{
   const canvas=canvasRef.current,context=canvas?.getContext('2d');
   if(!canvas||!context)return;
-  let width=0,height=0,frame=0,lastTime=0,lastDraw=0,baseCanvas,baseContext,nodes=[],edges=[],lights=[];
+  let width=0,height=0,frame=0;
   const motion=window.matchMedia('(prefers-reduced-motion: reduce)');
-  const dark=theme==='dark',radius=72,stepX=radius*1.5,stepY=Math.sqrt(3)*radius;
-  const palette=[184,171,258,322],trailDuration=1.8,frameInterval=100/30;
-  function makeLight(delay,hue,occupiedEdges,occupiedNodes){
-   const available=edges.map((edge,index)=>({edge,index}))
-    .filter(({edge,index})=>!occupiedEdges.has(index)
-     &&!occupiedNodes.has(edge.from)&&!occupiedNodes.has(edge.to));
-   if(!available.length)return null;
-   const chosen=available[Math.floor(Math.random()*available.length)];
-   const reverse=Math.random()<.5;
-   occupiedEdges.add(chosen.index);
-   occupiedNodes.add(chosen.edge.from);
-   occupiedNodes.add(chosen.edge.to);
-   return{
-    from:reverse?chosen.edge.to:chosen.edge.from,
-    to:reverse?chosen.edge.from:chosen.edge.to,
-    edge:chosen.index,
-    progress:0,
-    speed:.22+Math.random()*.06,
-    wait:delay,
-    hue,
-    trail:[]
-   };
+  const dark=theme==='dark';
+  const colors=dark
+   ?['rgba(91, 169, 196, 0.34)','rgba(87, 80, 186, 0.28)','rgba(53, 107, 155, 0.38)','rgba(145, 217, 231, 0.24)']
+   :['rgba(23, 107, 120, 0.13)','rgba(87, 80, 186, 0.10)','rgba(53, 107, 155, 0.14)','rgba(57, 141, 153, 0.10)'];
+  function waveY(x,base,amplitude,time,lineIndex){
+   const xPhase=x/Math.max(width,1)*Math.PI*2;
+   return base
+    +Math.sin(xPhase*1.05+time*(0.12+lineIndex*.002)+lineIndex*.38)*amplitude
+    +Math.sin(xPhase*2.18-time*(0.07+lineIndex*.0015)+lineIndex*.71)*amplitude*.32;
   }
-  function buildGrid(){
-   nodes=[];edges=[];
-   const nodeIds=new Map(),edgeIds=new Map();
-   const getNode=(x,y)=>{
-    const key=`${Math.round(x*10)},${Math.round(y*10)}`;
-    if(nodeIds.has(key))return nodeIds.get(key);
-    const id=nodes.length;
-    nodeIds.set(key,id);nodes.push({x,y,neighbors:[]});
-    return id;
-   };
-   const cols=Math.ceil(width/stepX)+2,rows=Math.ceil(height/stepY)+2;
-   for(let col=-1;col<cols;col++){
-    for(let row=-1;row<rows;row++){
-     const cx=col*stepX-radius,cy=row*stepY+((col%2+2)%2)*stepY/2-radius;
-     for(let side=0;side<6;side++){
-      const a=Math.PI/3*side,b=Math.PI/3*(side+1);
-      const from=getNode(cx+radius*Math.cos(a),cy+radius*Math.sin(a));
-      const to=getNode(cx+radius*Math.cos(b),cy+radius*Math.sin(b));
-      const key=from<to?`${from}:${to}`:`${to}:${from}`;
-      if(edgeIds.has(key))continue;
-      const edge=edges.length;
-      edgeIds.set(key,edge);edges.push({from,to});
-      nodes[from].neighbors.push({node:to,edge});
-      nodes[to].neighbors.push({node:from,edge});
-     }
-    }
-   }
-   const occupiedEdges=new Set(),occupiedNodes=new Set();
-   lights=Array.from({length:80},()=>{
-    const hue=palette[Math.floor(Math.random()*palette.length)];
-    return makeLight(Math.random()*5.4,hue,occupiedEdges,occupiedNodes);
-   }).filter(Boolean);
-  }
-  function drawGrid(){
-   baseCanvas.width=canvas.width;baseCanvas.height=canvas.height;
-   baseContext.setTransform(canvas.width/width,0,0,canvas.height/height,0,0);
-   baseContext.clearRect(0,0,width,height);
-   baseContext.beginPath();
-   for(const edge of edges){
-    const from=nodes[edge.from],to=nodes[edge.to];
-    baseContext.moveTo(from.x,from.y);baseContext.lineTo(to.x,to.y);
-   }
-   baseContext.strokeStyle=dark?'rgba(150, 196, 153, 0.16)':'rgba(72,94,129,.13)';
-   baseContext.lineWidth=1.1;baseContext.stroke();
-  }
-  function renderStatic(){
+  function draw(time=0){
    context.clearRect(0,0,width,height);
-   if(baseCanvas)context.drawImage(baseCanvas,0,0,width,height);
+   const count=24;
+   const bandTop=height*.18,bandHeight=height*.64;
+   for(let line=0;line<count;line++){
+    const position=line/(count-1);
+    const base=bandTop+bandHeight*position;
+    const amplitude=Math.min(height*.055,44)*(0.48+position*.42);
+    const color=colors[line%colors.length];
+    context.beginPath();
+    context.moveTo(-60,waveY(-60,base,amplitude,time,line));
+    const step=Math.max(18,Math.min(42,width/32));
+    for(let x=-60;x<=width+60;x+=step){
+     const y=waveY(x,base,amplitude,time,line);
+     const nextX=Math.min(x+step,width+60);
+     const nextY=waveY(nextX,base,amplitude,time,line);
+     context.quadraticCurveTo(x,y,(x+nextX)/2,(y+nextY)/2);
+    }
+    context.lineWidth=line===count/2?1.35:.75;
+    context.strokeStyle=color;
+    context.stroke();
+   }
   }
   function resize(){
-   const ratio=Math.min(window.devicePixelRatio||1,1.25);
+   const ratio=Math.min(window.devicePixelRatio||1,1.5);
    width=window.innerWidth;height=window.innerHeight;
    canvas.width=width*ratio;canvas.height=height*ratio;
    context.setTransform(ratio,0,0,ratio,0,0);
-   if(!baseCanvas){baseCanvas=document.createElement('canvas');baseContext=baseCanvas.getContext('2d')}
-   buildGrid();drawGrid();lastTime=0;lastDraw=0;
-   if(motion.matches||document.hidden)renderStatic();
-   else if(!frame)frame=requestAnimationFrame(draw);
+   draw(motion.matches?0:performance.now()/1000);
   }
-  function drawEdge(edgeId,alpha,hue,widthValue,blur){
-   const edge=edges[edgeId],a=nodes[edge.from],b=nodes[edge.to];
-   context.beginPath();context.moveTo(a.x,a.y);context.lineTo(b.x,b.y);
-   context.strokeStyle=`hsla(${hue},55%,${dark?68:48}%,${alpha})`;
-   context.lineWidth=widthValue;context.shadowColor=`hsla(${hue},65%,60%,${alpha})`;context.shadowBlur=blur;context.stroke();context.shadowBlur=0;
-  }
-  function advanceLight(light,delta,occupiedEdges,occupiedNodes){
-   for(let index=light.trail.length-1;index>=0;index--){
-    const trail=light.trail[index];trail.age+=delta;
-    if(trail.age>=trailDuration)light.trail.splice(index,1);
-   }
-   if(light.wait>0){light.wait=Math.max(0,light.wait-delta);return}
-   light.progress+=delta*light.speed;
-   if(light.progress<1)return;
-   light.trail.unshift({edge:light.edge,age:0});
-   light.trail.length=Math.min(light.trail.length,1);
-   const previous=light.from,current=light.to;
-   occupiedEdges.delete(light.edge);
-   occupiedNodes.clear();
-   for(const edgeId of occupiedEdges){
-     occupiedNodes.add(edges[edgeId].from);
-     occupiedNodes.add(edges[edgeId].to);
-   }
-   const options=nodes[current].neighbors.filter(neighbor=>neighbor.node!==previous
-    &&!occupiedEdges.has(neighbor.edge)&&!occupiedNodes.has(neighbor.node));
-   const choices=options.length?options:nodes[current].neighbors.filter(neighbor=>neighbor.node!==previous
-    &&!occupiedEdges.has(neighbor.edge)&&!occupiedNodes.has(neighbor.node));
-   if(!choices.length){
-    occupiedEdges.add(light.edge);
-    occupiedNodes.clear();
-    for(const edgeId of occupiedEdges){
-     occupiedNodes.add(edges[edgeId].from);
-     occupiedNodes.add(edges[edgeId].to);
-    }
-    light.progress=.99;
-    light.wait=.18+Math.random()*.5;
-    return;
-   }
-   const next=choices[Math.floor(Math.random()*choices.length)];
-   light.from=current;light.to=next.node;light.edge=next.edge;
-   occupiedEdges.add(light.edge);
-   occupiedNodes.clear();
-   for(const edgeId of occupiedEdges){
-    occupiedNodes.add(edges[edgeId].from);
-    occupiedNodes.add(edges[edgeId].to);
-   }
-   light.progress-=1;light.wait=.18+Math.random()*.5;
-  }
-  function draw(timestamp){
+  function animate(timestamp){
    frame=0;
-   if(document.hidden)return;
-   if(timestamp-lastDraw<frameInterval-1){frame=requestAnimationFrame(draw);return}
-   const delta=lastTime?Math.min((timestamp-lastTime)/100,.05):0;
-   lastTime=timestamp;lastDraw=timestamp;
-   context.clearRect(0,0,width,height);context.drawImage(baseCanvas,0,0,width,height);
-   const occupiedEdges=new Set(),occupiedNodes=new Set();
-   for(const light of lights){
-    occupiedEdges.add(light.edge);
-    occupiedNodes.add(edges[light.edge].from);
-    occupiedNodes.add(edges[light.edge].to);
-   }
-   for(const light of lights){
-    advanceLight(light,delta,occupiedEdges,occupiedNodes);
-    for(const trail of light.trail){
-     const opacity=(1-trail.age/trailDuration)*.22;
-     drawEdge(trail.edge,opacity,light.hue,1.8,4);
-    }
-    const from=nodes[light.from],to=nodes[light.to],progress=light.progress;
-    const headX=from.x+(to.x-from.x)*progress,headY=from.y+(to.y-from.y)*progress;
-    const tail=Math.min(.9,progress),tailX=from.x+(to.x-from.x)*(progress-tail),tailY=from.y+(to.y-from.y)*(progress-tail);
-    context.beginPath();context.moveTo(tailX,tailY);context.lineTo(headX,headY);
-    context.strokeStyle=`hsla(${light.hue},55%,${dark?70:48}%,.42)`;context.lineWidth=2;context.shadowColor=`hsla(${light.hue},65%,60%,.6)`;context.shadowBlur=5;context.stroke();context.shadowBlur=0;
-    context.beginPath();context.arc(headX,headY,2.1,0,Math.PI*2);
-    context.fillStyle=`hsla(${light.hue},65%,${dark?76:54}%,.8)`;context.shadowColor=`hsla(${light.hue},70%,65%,.65)`;context.shadowBlur=6;context.fill();context.shadowBlur=0;
-   }
-   frame=requestAnimationFrame(draw);
+   if(document.hidden||motion.matches)return;
+   draw(timestamp/1000);
+   frame=requestAnimationFrame(animate);
   }
-  function visibilityChange(){
-   if(document.hidden){cancelAnimationFrame(frame);frame=0;lastTime=0;return}
-   if(motion.matches)renderStatic();else if(!frame)frame=requestAnimationFrame(draw);
+  function onMotionChange(){
+   cancelAnimationFrame(frame);frame=0;
+   if(motion.matches)draw(0);
+   else if(!document.hidden)frame=requestAnimationFrame(animate);
   }
-  function motionChange(){
-   cancelAnimationFrame(frame);frame=0;lastTime=0;
-   if(motion.matches)renderStatic();else if(!document.hidden)frame=requestAnimationFrame(draw);
+  function onVisibilityChange(){
+   if(document.hidden){cancelAnimationFrame(frame);frame=0;return}
+   if(!motion.matches&&!frame)frame=requestAnimationFrame(animate);
   }
   window.addEventListener('resize',resize,{passive:true});
-  document.addEventListener('visibilitychange',visibilityChange);
-  motion.addEventListener('change',motionChange);
+  document.addEventListener('visibilitychange',onVisibilityChange);
+  motion.addEventListener('change',onMotionChange);
   resize();
-  return()=>{cancelAnimationFrame(frame);window.removeEventListener('resize',resize);document.removeEventListener('visibilitychange',visibilityChange);motion.removeEventListener('change',motionChange)};
+  if(!motion.matches&&!document.hidden)frame=requestAnimationFrame(animate);
+  return()=>{
+   cancelAnimationFrame(frame);
+   window.removeEventListener('resize',resize);
+   document.removeEventListener('visibilitychange',onVisibilityChange);
+   motion.removeEventListener('change',onMotionChange);
+  };
  },[theme]);
- return <div className="ambient-background" aria-hidden="true"><canvas ref={canvasRef}/></div>
+ return <div className="ambient-background" aria-hidden="true"><canvas ref={canvasRef}/></div>;
 }
 function ProfilePage(){
  const cached=user()||{};

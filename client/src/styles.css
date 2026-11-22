@@ -7,9 +7,8 @@
 :root,button,input,select,textarea{font-family:Roboto,Arial,sans-serif}
 :root{font-size:16px;background:#edf3f8}
 body{background:#edf3f8;color:#172b3e;font-size:15px}
-.ambient-background{position:fixed;inset:0;z-index:0;overflow:hidden;background:linear-gradient(125deg,#f3f7fb,#eaf2f8,#f7f9fc);background-size:220% 220%;animation:ambient-wash 28s ease-in-out infinite alternate}
+.ambient-background{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
 .ambient-background canvas{display:block;width:100%;height:100%}
-@keyframes ambient-wash{from{background-position:0% 40%}to{background-position:100% 60%}}
 .app-shell,.login-shell{position:relative;z-index:1;background:transparent}
 .main-area{background:transparent}
 .topbar{background:rgba(255,255,255,.86);backdrop-filter:blur(12px)}
@@ -56,7 +55,6 @@ td{font-size:14px}
 .login-hint{font-size:12px}
 .login-shell{background:transparent}
 @media(max-width:760px){.topbar h2{font-size:17px}.page-title h1{font-size:24px}.stat-card strong{font-size:22px}}
-@media(prefers-reduced-motion:reduce){.ambient-background{animation:none}}
 @media(max-width:420px){.stat-grid{grid-template-columns:1fr 1fr}.stat-card{align-items:flex-start;flex-direction:column}.page-title>div:last-child button{flex:1}.login-card{padding:25px}}
 .profile-panel{max-width:900px}
 .profile-password-note{color:#718397;font-size:13px;padding:4px 0}
@@ -80,7 +78,6 @@ td{font-size:14px}
 .import-issues ul{margin:8px 0 0;padding-left:22px;line-height:1.6}
 
 .app-root{position:relative;isolation:isolate;min-height:100vh;background:#f2f6fc;color:#172b3e;transition:background-color .25s ease,color .25s ease}
-.app-root .ambient-background{z-index:0;pointer-events:none;background:radial-gradient(ellipse at 18% 0%,#fff 0%,transparent 42%),linear-gradient(135deg,#f2f6fc,#e8eff8 58%,#f7f4fb);animation:none}
 .app-root .app-shell,.app-root .login-shell{position:relative;z-index:1}
 .app-root .topbar{padding-right:18px;background:rgba(255,255,255,.72);border-color:rgba(204,216,232,.72);backdrop-filter:blur(20px) saturate(150%)}
 .app-root .panel,.app-root .stat-card,.app-root .login-card,.app-root .modal{background:rgba(255,255,255,.78);border-color:rgba(255,255,255,.82);backdrop-filter:blur(18px) saturate(145%);box-shadow:0 12px 35px rgba(37,61,97,.08),inset 0 1px rgba(255,255,255,.85)}
@@ -92,10 +89,7 @@ td{font-size:14px}
 .app-root .topbar{gap:16px}
 .app-root .topbar-right{margin-left:auto}
 .app-root .stat-card:hover,.app-root .panel:hover{transform:translateY(-2px);border-color:rgba(145,164,203,.42);box-shadow:0 16px 38px rgba(37,61,97,.12),inset 0 1px rgba(255,255,255,.88)}
-.app-root .ambient-background canvas{opacity:.64}
-.app-root.theme-dark .ambient-background canvas{opacity:.76}
 .app-root.theme-dark{background:#090e1b;color:#e5eaf5}
-.app-root.theme-dark .ambient-background{background:radial-gradient(ellipse at 18% 0%,#17233b 0%,transparent 48%),linear-gradient(135deg,#090e1b,#101426 58%,#171125)}
 .app-root.theme-dark .topbar,.app-root.theme-dark .panel,.app-root.theme-dark .stat-card,.app-root.theme-dark .login-card,.app-root.theme-dark .modal,.app-root.theme-dark .modal-head{background:rgba(17,25,43,.78);border-color:rgba(119,139,177,.2);color:#e5eaf5;box-shadow:0 14px 40px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.07)}
 .app-root.theme-dark .topbar{border-bottom-color:rgba(119,139,177,.2)}
 .app-root.theme-dark .sidebar{background:#0b1425}
