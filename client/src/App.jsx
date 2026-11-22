@@ -33,7 +33,7 @@ function Login(){
  }
  return <div className="login-shell">
   <div className="login-card">
-   <div className="brand-mark">L2E</div>
+   <img className="brand-logo login-logo" src="/logo.png" alt="Learn2Earn"/>
    <p className="eyebrow">LEARN2EARN · ABUJA CAMPUS</p>
    <h1>Mentor Portal</h1>
    <p className="muted">Sign in to manage fellow progress, assessments and reporting.</p>

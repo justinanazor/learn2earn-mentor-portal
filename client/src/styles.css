@@ -78,6 +78,7 @@ td{font-size:14px}
 .import-issues ul{margin:8px 0 0;padding-left:22px;line-height:1.6}
 
 .app-root{position:relative;isolation:isolate;min-height:100vh;background:#f2f6fc;color:#172b3e;transition:background-color .25s ease,color .25s ease}
+.login-card .login-logo{display:block;width:190px;height:75px;object-fit:cover;object-position:center 50%;border-radius:4px;background:#fff;margin:0 auto 22px;padding:0;opacity:.76}
 .app-root .app-shell,.app-root .login-shell{position:relative;z-index:1}
 .app-root .topbar{padding-right:18px;background:rgba(255,255,255,.72);border-color:rgba(204,216,232,.72);backdrop-filter:blur(20px) saturate(150%)}
 .app-root .panel,.app-root .stat-card,.app-root .login-card,.app-root .modal{background:rgba(255,255,255,.78);border-color:rgba(255,255,255,.82);backdrop-filter:blur(18px) saturate(145%);box-shadow:0 12px 35px rgba(37,61,97,.08),inset 0 1px rgba(255,255,255,.85)}
