@@ -52,7 +52,14 @@ for (const [path,{model,sort}] of Object.entries(config)) {
     const existing=await model.findById(req.params.id).populate('fellow');
     if(!existing || !canAccessFellow(req.user,existing.fellow)) return res.status(404).json({message:'Record not found'});
     const payload=req.user.role==='mentor'?{...req.body,fellow:existing.fellow._id,mentor:req.user.name}:req.body;
+    if(path==='assessments') {
+      const keys=['problemUnderstanding','technicalExplanation','codeQuality','debugging','independentModification','lmsConsistency','delivery','professionalism'];
+      const values=keys.map(k=>Number(payload[k])).filter(n=>Number.isFinite(n)&&n>=1&&n<=5);
+      payload.score=values.length===8 ? Math.round(values.reduce((a,b)=>a+b,0)/8/5*1000)/10 : undefined;
+      payload.outcome=payload.score==null?'Pending':payload.score>=85?'Strong':payload.score>=70?'On track':payload.score>=50?'Needs support':'At risk';
+    }
     const record=await model.findByIdAndUpdate(req.params.id,payload,{new:true,runValidators:true}).populate('fellow',populatedFellow);
+    if(path==='assessments' && record.score!=null) await Fellow.findByIdAndUpdate(record.fellow,{ $set:{overallStanding:record.score<50?'At risk':record.score<70?'Needs attention':'On track'} });
     res.json(record);
   });
   router.delete(`/${path}/:id`, async (req,res) => {
